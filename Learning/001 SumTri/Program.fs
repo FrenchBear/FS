@@ -1,4 +1,10 @@
-﻿let sumNumbersUpTo max =
+﻿(* 001 SumTri
+** Learning F#, recursive function to compute sum of integers from 1 to n
+**
+** 2024-06-17   PV
+*)
+
+let sumNumbersUpTo max =
 
     // recursive helper function with accumulator
     let rec recursiveSum n sumSoFar =

@@ -3,13 +3,16 @@
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
-		<RootNamespace>FS001_SumTri</RootNamespace>
-		<Description>Learning F#, recursive function to compute sum of integers from 1 to n</Description>
+		<RootNamespace>FS002</RootNamespace>
+		<Description>Learning F#, using modules</Description>
 		<Authors>Pierre Violent</Authors>
 		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
+
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Compile Include="MathStuff.fs" />
+		<Compile Include="Powers.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>
 
