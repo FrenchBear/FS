@@ -1,8 +1,8 @@
-﻿(* 002 Module
-** Learning F#, using a module
-**
-** 2024-06-17   PV
-*)
+﻿// 002 Module
+// Learning F#, using a module
+// Simple Powers module
+//
+// 2024-06-17   PV
 
 namespace FS002
 
