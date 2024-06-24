@@ -1,10 +1,10 @@
-﻿// 002 Module
+﻿// 02 Modules
 // Learning F#, using a module
 // Simple Powers module
 //
 // 2024-06-17   PV
 
-namespace FS002
+namespace FS02
 
 module Powers =
     let p2 x = x ** 2.0

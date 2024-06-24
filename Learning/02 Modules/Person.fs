@@ -1,10 +1,10 @@
-﻿// 002 Module
+﻿// 02 Modules
 // Learning F#, using a module
 // Combining type and functions, type defined separately
 //
 // 2024-06-17   PV
 
-namespace FS002
+namespace FS02
 
 // declare the type outside the module
 type PersonType = {First:string; Last:string}

@@ -3,17 +3,13 @@
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
-		<RootNamespace>FS002</RootNamespace>
-		<Description>Learning F#, Using modules</Description>
+		<RootNamespace>FS06</RootNamespace>
+		<Description>Learning F#, Play with matching</Description>
 		<Authors>Pierre Violent</Authors>
 		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="Customer.fs" />
-		<Compile Include="Person.fs" />
-		<Compile Include="MathStuff.fs" />
-		<Compile Include="Powers.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>
 

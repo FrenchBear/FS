@@ -1,5 +1,5 @@
-﻿// 004 Calc
-// Learning F#, Example pf stack calculator
+﻿// 04 Calc
+// Learning F#, Example of stack calculator
 //
 // 2024-06-20   PV
 

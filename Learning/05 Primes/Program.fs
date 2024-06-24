@@ -1,4 +1,4 @@
-﻿// 005 Primes
+﻿// 05 Primes
 // Learning F#, Prime numbers sieve
 //
 // 2024-06-22   PV

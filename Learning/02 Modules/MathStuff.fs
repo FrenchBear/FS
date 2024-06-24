@@ -1,10 +1,10 @@
-﻿// 002 Module
+﻿// 02 Modules
 // Learning F#, using a module
 // A more complete module with various content, a submodule and initialization code
 //
 // 2024-06-17   PV
 
-namespace FS002
+namespace FS02
 
 module MathStuff =
 

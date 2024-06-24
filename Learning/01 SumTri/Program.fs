@@ -1,4 +1,4 @@
-﻿(* 001 SumTri
+﻿(* 01 SumTri
 ** Learning F#, recursive function to compute sum of integers from 1 to n
 **
 ** 2024-06-17   PV
