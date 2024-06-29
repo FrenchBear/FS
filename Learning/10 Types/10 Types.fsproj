@@ -3,16 +3,13 @@
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
-		<RootNamespace>FS09</RootNamespace>
-		<Description>Learning F#, Roman numerals</Description>
+		<RootNamespace>FS10</RootNamespace>
+		<Description>Learning F#, Play with types</Description>
 		<Authors>Pierre Violent</Authors>
 		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="RomanNumeralsPerso.fs" />
-		<Compile Include="RomanNumeralsV1.fs" />
-		<Compile Include="RomanNumeralsV2.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>
 
