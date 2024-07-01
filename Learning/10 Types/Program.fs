@@ -1027,6 +1027,27 @@ module BuiltInNetTypes =
     let f64b:double = 1.41421356237 // Double, 32-bit floating point
     let dec:decimal = 1.23456789m   // Decimal, high-precision floating point
 
+    // Pointer
+    let ni:nativeint = 99n          // IntPtr, Pointer/handle, signed
+    let nu:unativeint = 99un        // UIntPtr, Pointer/handle, unsigned
+
+    // F# alias	        CLR Type
+    // --------------   --------------
+    // float32/single	System.Single
+    // float/double	    System.Double
+    // decimal	        System.Decimal
+    // sbyte/int8	    System.SByte
+    // int16	        System.Int16
+    // int/int32	    System.Int32
+    // int64	        System.Int64
+    // byte/uint8	    System.Byte
+    // uint16	        System.UInt16
+    // uint/uint32	    System.UInt32
+    // uint64	        System.UIn64
+    // nativeint	    System.IntPtr
+    // unativeint	    System.UIntPtr
+
+
     // Casting (only for numercial types)
     let x = int 1.23
     let y = float 1
