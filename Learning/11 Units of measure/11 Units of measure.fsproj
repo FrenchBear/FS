@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<RootNamespace>FS11</RootNamespace>
+		<Description>Learning F#, Play with Units of measure</Description>
+		<Authors>Pierre Violent</Authors>
+		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Include="Program.fs" />
+	</ItemGroup>
+
+</Project>

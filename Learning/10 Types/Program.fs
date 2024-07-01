@@ -844,3 +844,310 @@ module Option =
     // nest Nullables, and they don’t have much special behavior.
     // On the other hand, the F# option is a true first class type and can be used consistently across all types in the
     // same way. (See the examples above in the “Options are not just for primitive types” section.)
+
+
+
+
+// ------------------------------------------------------
+// Enum types
+
+module Enum =
+    printfn "-------------------------------\nEnum\n"
+    
+    // The enum type in F# is the same as the enum type in C#. Its definition is superficially just like that of a union
+    // type, but there are many non-obvious differences to be aware of.
+
+    // Defining enums
+
+    // To define an enum you use exactly the same syntax as a union type with empty cases, except that you must specify
+    // a constant value for each case, and the constants must all be of the same type.
+    type SizeUnion = Small | Medium | Large         // union
+    type ColorEnum = Red=0 | Yellow=1 | Blue=2      // enum
+    
+    // Strings are not allowed, only ints or compatible types such bytes and chars:
+    // type MyEnum = Yes = "Y" | No ="N"  // Error. Strings not allowed.
+    type MyEnum = Yes = 'Y' | No ='N'  // Ok because char was used.
+
+    // Union types require that their cases start with an uppercase letter. This is not required for enums.
+    // type SizeUnion = Small | Medium | large      // Error - "large" is invalid.
+    type ColorEnum2 = Orange=0 | Green=1 | purple=2      // Ok
+
+    // Just as with C#, you can use the FlagsAttribute for bit flags:
+    [<System.FlagsAttribute>]
+    type PermissionFlags = Read = 1 | Write = 2 | Execute = 4
+
+    let permission = PermissionFlags.Read ||| PermissionFlags.Write
+
+
+    // Constructing enums
+    
+    // Unlike union types, to construct an enum you must always use a qualified name:
+    //let red = Red            // Error. Enums must be qualified
+    let red = ColorEnum.Red  // Ok
+    let small = Small        // Ok.  Unions do not need to be qualified
+
+    // You can also cast to and from the underlying int type:
+    let redInt = int ColorEnum.Red
+    let redAgain:ColorEnum = enum redInt // cast to a specified enum type
+    let yellowAgain = enum<ColorEnum>(1) // or create directly
+
+    // You can even create values that are not on the enumerated list at all.
+    let unknownColor = enum<ColorEnum>(99)   // valid
+
+    // And, unlike unions, you can use the BCL Enum functions to enumerate and parse values, just as with C#.
+    // For example:
+    let values = System.Enum.GetValues(typeof<ColorEnum>)
+    let redFromString =
+        System.Enum.Parse(typeof<ColorEnum>,"Red")
+        :?> ColorEnum  // downcast needed
+
+
+    // Matching enums
+
+    // To match an enum you must again always use a qualified name:
+    //let unqualifiedMatch x =
+    //    match x with
+    //    | Red -> printfn "red"             // warning FS0049
+    //    | _ -> printfn "something else"
+    
+    let qualifiedMatch x =
+        match x with
+        | ColorEnum.Red -> printfn "red"   //OK. qualified name used.
+        | _ -> printfn "something else"
+    
+    // Both unions and enums will warn if you have not covered all known cases:
+    //let matchUnionIncomplete x =
+    //    match x with
+    //    | Small -> printfn "small"
+    //    | Medium -> printfn "medium"  // Warning: Incomplete pattern matches
+    
+    //let matchEnumIncomplete x =
+    //    match x with
+    //    | ColorEnum.Red -> printfn "red"
+    //    | ColorEnum.Yellow -> printfn "yellow"
+    //    // Warning: Incomplete pattern matches
+    
+    // One important difference between unions and enums is that can you make the compiler happy about exhaustive
+    // pattern matching by listing all the union types. Not so for enums. It is possible to create an enum not on the
+    // predeclared list, and try to match with it, and get a runtime exception, so the compiler will warn you even if
+    // you have explicitly listed all the known enums:
+
+    // the compiler is still not happy
+    //let matchEnumIncomplete2 x =
+    //    match x with
+    //    | ColorEnum.Red -> printfn "red"
+    //    | ColorEnum.Yellow -> printfn "yellow"
+    //    | ColorEnum.Blue -> printfn "blue"
+    //    // the value '3' may indicate a case not covered by the pattern(s).
+    
+    // The only way to fix this is to add a wildcard to the bottom of the cases, to handle enums outside the predeclared
+    // range.
+    
+    // the compiler is finally happy
+    let matchEnumComplete x =
+        match x with
+        | ColorEnum.Red -> printfn "red"
+        | ColorEnum.Yellow -> printfn "yellow"
+        | ColorEnum.Blue -> printfn "blue"
+        | _ -> printfn "something else"
+
+    let unknownColor2 = enum<ColorEnum>(99)   // valid
+    matchEnumComplete unknownColor2
+
+
+    // Summary
+
+    // In general, you should prefer discriminated union types over enums, unless you really need to have an int value
+    // associated with them, or you are writing types that need to be exposed to other .NET languages.
+
+    printfn ""
+
+
+
+// ------------------------------------------------------
+// Built-in .Net types
+
+module BuiltInNetTypes =
+    printfn "-------------------------------\nBuilt-in .Net types\n"
+
+    // Object
+    let ob = obj()
+
+    // Unit, no .Net equivalent
+    let un = ()
+
+    // Bool
+    let bo = (true || false)
+
+    // Char (Unicode)
+    let ch = '√'            // Use \' for quote
+    let esc = '\x1b'        // Escape
+    let sqrt = '\u221a'     // Unicode for √
+
+    // Byte (Ascii)
+    let ba = 'A'B           // Uppercase B, b doesn't work
+
+    // String (Unicode)
+    let st = "Aé♫山𝄞🐗"     // Can use standard \n, \t, \\, etc. Quotes need \"
+
+    // Verbatim string
+    let vs = @"C:\Windows\System32\notepad.exe"
+
+    // Triple-quoted string (Unicode)
+    let tq = """can "contain" ""special"" chars"""
+
+    // Byte[] (Ascii string)
+    let bc = "Hello, world"B
+    let bb:byte[] = [|1uy; 2uy; 3uy|]
+
+    // Integers
+    let i8s:sbyte = 99y         // SByte, 8-bit signed
+    let i8u:byte  = 99uy        // Byte, 8-bit unsigned
+    let i16s:int16 = 99s        // Int16, 16-bit signed
+    let i16u:uint16 = 99us      // UInt16, 16-bit unsigned
+    let i32s:int = 99           // Int32, 32-bit signed [default]
+    let int32u:uint32 = 99u     // UInt32, 32-bit unsigned
+    let int64s:int64 = 99L      // Int64, 64-bit signed
+    let int64u:uint64 = 99UL    // UInt64, 64-bit usigned
+    let bi:bigint = 99I         // BigInteger, unlimited precision
+
+    // Hex prefix is 0x, oct prefix is 0o, binary prefix is 0b
+    let ix = 0xCAFE
+    let io = 0o33
+    let ib = 0b001010100100001
+
+    // Can use _ is digit separator
+    let oneMillion = 1_000_000
+    let maxU16 = 0b1111_1111_1111_1111
+
+    // Floating point
+    let f32:float32 = 3.1416f       // Single, 32-bit floating point
+    let f32b:single = 1.4142f       // use flot32 or single keywords
+    let f64:float = 3.141592653589  // Double, 32-bit floating point
+    let f64b:double = 1.41421356237 // Double, 32-bit floating point
+    let dec:decimal = 1.23456789m   // Decimal, high-precision floating point
+
+    // Casting (only for numercial types)
+    let x = int 1.23
+    let y = float 1
+    // for bool, use Convert or similar
+    let b = System.Convert.ToBoolean(1)
+
+    // Boxing and unboxing
+    // Just as in C# and other .NET languages, the primitive int and float types are value objects, not classes.
+    
+    // Automatic cases
+    let objFunction (o:obj) = o     // Function with parameter of type Object
+    let result = objFunction 1      // test: call with an integer, boxing is automatix
+    // result is: val result : obj = 1
+    let resultIsOne = (result = 1)  // Automatic unboxing, does not always work!
+
+    // Manual boxing/unboxing
+    let o = box 1
+    let resultIsOneB = (result = box 1) // true
+
+    // unboxing requires that compiler has enough info for type inference
+    let i:int = unbox o             // OK, type known for target value
+    let j = unbox<int> o            // OK, explicit type given in unbox
+    let k = 1 + unbox o             // OK, type inference, so no type annotation needed
+    let resultIsOneC = (unbox result = 1)
+    // let ij = unbox o             // Error FS0030: Value restriction: The value 'ij' has an inferred generic type  val ij: '_a However, values cannot have generic type variables like '_a in "let x: '_a".
+
+    // boxing with type detection
+    // let detectType v =
+    //     match v with
+    //         | :? int -> printfn "this is an int"
+    //         | _ -> printfn "something else"
+    // Unfortunately, this code will fail to compile, with the following error:
+    //     error FS0008: This runtime coercion or type test from type 'a to int
+    //     involves an indeterminate type based on information prior to this program point.
+    //     Runtime type tests are not allowed on some types. Further type annotations are needed.
+
+    let detectTypeBoxed v =
+        match box v with      // used "box v"
+            | :? int -> printfn "this is an int"
+            | _ -> printfn "something else"
+
+    // test
+    detectTypeBoxed 1
+    detectTypeBoxed 3.14
+    printfn ""
+
+
+printfn "-------------------------------\nPlay with types\n"
+
+type Chien = {Name: string; Race: string}
+type Chat = {Name: string; Race: string}
+type Animal = | Chien of Chien | Chat of Chat
+
+let rexChien:Chien = {Name="Rex"; Race="Bâtard"}
+let tigreChat:Chat = {Name="Tigre"; Race="Gouttière"}
+
+let rexAnimal = Chien {Name="Rex"; Race="Bâtard"}
+let tigreAnimal = Chat {Name="Tigre"; Race="Gouttière"}
+
+// Doesn't work, all branches must return the same type
+//let extractAnimal a =
+//  match a with
+//  | Chien d -> d
+//  | Chat c -> c
+
+let extractChien a =
+  match a with
+  | Chien d -> Some(d)
+  | Chat c -> None
+
+// . notation only works for fields
+// let c1 = rexChien=rexAnimal.Chien
+
+// Doesn't work even if both Chien and Chat have a property Name
+// let name = rexAnimal.Name
+
+let c2 = extractChien   // c2 is Chien option
+
+let extractName 
+ a =
+  match a with
+  | Chien d -> d.Name
+  | Chat c -> c.Name
+
+extractName rexAnimal |> printfn "%s"
+extractName tigreAnimal |> printfn "%s"
+
+// Add a common property to Animal
+type Animal with
+    member this.Name =
+        match this with
+        | Chien d -> d.Name
+        | Chat c -> c.Name
+
+printfn "%s" rexAnimal.Name
+printfn "%s" tigreAnimal.Name
+printfn ""
+
+
+// Enum
+type Pays = France=0 | Angleterre=1 | Allemagne=2
+//let p=Angleterre
+let p=Pays.Angleterre       // enum requires prefix
+let internetCode pays = 
+    match pays with
+        | Pays.France -> "fr"
+        | Pays.Angleterre -> "uk"
+        | Pays.Allemagne -> "de"
+        | _ -> "??"         // enum requires a "case else" since
+
+internetCode Pays.Allemagne |> printfn "Pays = %s"
+enum<Pays>(9) |>internetCode  |> printfn "Pays = %s"
+
+// Union
+type Continent = Europe|Amérique|Océanie   // |Afrique|Asie
+let c=Amérique
+let shortCode =
+    function
+    | Europe -> 'E'
+    | Amérique -> 'A'
+    | Océanie -> 'O'        // No need for "case else" with unions
+
+shortCode c |> printfn "continent = %c"
+
