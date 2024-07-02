@@ -1172,3 +1172,30 @@ let shortCode =
 
 shortCode c |> printfn "continent = %c"
 
+
+// Replay type alias issue, it's just a synonym, not a separate type
+type Art = int              // Type alias
+type Cmd = int              // Type alias too
+let a0:Art = 1
+let c0:Cmd = 1
+let a0b:Art = a0
+let a0c:Art = c0            // No warning, problem...
+
+// Use single discriminated union
+type Article = Article of int
+type Commande = Commande of int
+let a1 = Article 1
+let c1 = Commande 1
+let a2:Article = a1
+// let a3:Article = c1      // Error, normal!
+
+// Use measures
+[<Measure>] type article
+[<Measure>] type commande
+let ar1 = 1<article>
+let co1 = 1<commande>
+let ar2:int<article> = ar1
+// let ar2:int<article> = co1   // Error, normal!
+
+
+
