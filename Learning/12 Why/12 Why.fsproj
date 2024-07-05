@@ -3,8 +3,8 @@
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
-		<RootNamespace>FS11</RootNamespace>
-		<Description>Learning F#, Understand type inference</Description>
+		<RootNamespace>FS12</RootNamespace>
+		<Description>Learning F#, Exercises based on "Why using F#?"</Description>
 		<Authors>Pierre Violent</Authors>
 		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
 	</PropertyGroup>
