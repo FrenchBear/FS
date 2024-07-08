@@ -403,3 +403,51 @@ let showRainbow =
 // test the showRainbow function
 defaultShape |> showRainbow |> ignore
 printfn ""
+
+
+
+// --------------------------------
+// Pattern-matching
+
+// matching tuples directly
+let firstPart, secondPart, _ =  (1,2,3)  // underscore means ignore
+
+// matching lists directly
+let elem1::elem2::rest = [1..10]       // ignore the warning for now
+
+// matching lists inside a match..with
+let listMatcher aList =
+    match aList with
+    | [] -> printfn "the list is empty"
+    | [firstElement] -> printfn "the list has one element %A " firstElement
+    | [first; second] -> printfn "list is %A and %A" first second
+    | _ -> printfn "the list has more than two elements"
+
+listMatcher [1;2;3;4]
+listMatcher [1;2]
+listMatcher [1]
+listMatcher []
+
+
+// create some types and a customer
+type Address = { Street: string; City: string; }
+type Customer = { ID: int; Name: string; Address: Address }
+let customer1 = { ID = 1; Name = "Bob"; Address = {Street="123 Main"; City="NY" }}
+
+// extract name only
+let { Name=name1a } = customer1
+printfn "The customer is called %s" name1a
+
+type Animal = {Name: string; Race: string}      // Test when we reuse field Name in a different struct
+// extract name only, need to use qualified member name
+let { Customer.Name=name1b } = customer1
+printfn "The customer is called %s" name1b
+
+// extract name and id, since ID is not in Animal, there's no ambiguity here
+let { ID=id2; Name=name2; } =  customer1
+printfn "The customer called %s has id %i" name2 id2
+
+// extract name and address
+let { Name=name3;  Address={Street=street3}  } =  customer1
+printfn "The customer is called %s and lives on %s" name3 street3
+
