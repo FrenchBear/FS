@@ -541,3 +541,119 @@ let fizzBuzz i =
 // test
 [1..20] |> List.iter fizzBuzz
 printfn "\n"
+
+
+
+
+// --------------------------------
+// Exhaustive pattern matching as an error handling technique
+
+
+type Result<'a, 'b> = // define a "union" of two different alternatives
+    | Success of 'a   // 'a means generic type. The actual type will be determined when it is used.
+    | Failure of 'b   // generic failure type as well
+
+// define all possible errors
+type FileErrorReason =
+    | FileNotFound of string
+    | UnauthorizedAccess of string * System.Exception
+
+// define a low level function in the bottom layer
+let performActionOnFile action filePath =
+   try
+      // open file, do the action and return the result
+      use sr = new System.IO.StreamReader(filePath:string)
+      let result = action sr  // do the action to the reader
+      Success (result)        // return a Success
+   with      // catch some exceptions and convert them to errors
+      | :? System.IO.FileNotFoundException as ex
+          -> Failure (FileNotFound filePath)
+      | :? System.Security.SecurityException as ex
+          -> Failure (UnauthorizedAccess (filePath,ex))
+      // other exceptions are unhandled
+
+// The code demonstrates how performActionOnFile returns a Result object which has two alternatives: Success and
+// Failure. The Failure alternative in turn has two alternatives as well: FileNotFound and UnauthorizedAccess.
+
+// Now the intermediate layers can call each other, passing around the result type without worrying what its structure
+// is, as long as they don’t access it:
+
+// a function in the middle layer
+let middleLayerDo action filePath =
+    let fileResult = performActionOnFile action filePath
+    // do some stuff
+    fileResult // return
+
+// a function in the top layer
+let topLayerDo action filePath =
+    let fileResult = middleLayerDo action filePath
+    // do some stuff
+    fileResult // return
+
+
+// Because of type inference, the middle and top layers do not need to specify the exact types returned. If the lower
+// layer changes the type definition at all, the intermediate layers will not be affected.
+
+// Obviously at some point, a client of the top layer does want to access the result. And here is where the requirement
+// to match all patterns is enforced. The client must handle the case with a Failure or else the compiler will complain.
+// And furthermore, when handling the Failure branch, it must handle the possible reasons as well. In other words,
+// special case handling of this sort can be enforced at compile time, not at runtime! And in addition the possible
+// reasons are explicitly documented by examining the reason type.
+// Here is an example of a client function that accesses the top layer:
+
+// get the first line of the file
+let printFirstLineOfFile filePath =
+    let fileResult = topLayerDo (fun fs->fs.ReadLine()) filePath
+    match fileResult with
+    | Success result ->
+        // note type-safe string printing with %s
+        printfn "first line is: '%s'" result
+    | Failure reason ->
+       match reason with  // must match EVERY reason
+       | FileNotFound file ->
+           printfn "File not found: %s" file
+       | UnauthorizedAccess (file,_) ->
+           printfn "You do not have access to the file: %s" file
+
+// You can see that this code must explicitly handle the Success and Failure cases, and then for the failure case, it
+// explicitly handles the different reasons. If you want to see what happens if it does not handle one of the cases, try
+// commenting out the line that handles UnauthorizedAccess and see what the compiler says.
+
+// Now it is not required that you always handle all possible cases explicitly. In the example below, the function uses
+// the underscore wildcard to treat all the failure reasons as one. This can be considered bad practice if we want to
+// get the benefits of the strictness, but at least it is clearly done.
+
+// get the length of the text in the file
+let printLengthOfFile filePath =
+   let fileResult =
+     topLayerDo (fun fs->fs.ReadToEnd().Length) filePath
+   match fileResult with
+   | Success result ->
+      // note type-safe int printing with %i
+      printfn "length is: %i" result
+   | Failure _ ->
+      printfn "An error happened but I don't want to be specific"
+
+// Now let’s see all this code work in practice with some interactive tests.
+// First set up a good file and a bad file.
+// write some text to a file
+let writeSomeText filePath someText =
+    use writer = new System.IO.StreamWriter(filePath:string)
+    writer.WriteLine(someText:string)
+
+let goodFileName = @"C:\Temp\good.txt"
+let badFileName = @"C:\Temp\bad.txt"
+writeSomeText goodFileName "hello"
+
+// And now test interactively:
+printFirstLineOfFile goodFileName
+printLengthOfFile goodFileName
+
+printFirstLineOfFile badFileName
+printLengthOfFile badFileName
+
+printfn ""
+
+
+
+// --------------------------------
