@@ -410,12 +410,11 @@ printfn ""
 // Pattern-matching
 
 // matching tuples directly
-let firstPart, secondPart, _ =  (1,2,3)  // underscore means ignore
+let firstPart, secondPart, _ =  (1,2,3) // underscore means ignore
 
-#nowarn "25"
+//#nowarn "25"                          // Deactivating a warning is for the whole file...
 // matching lists directly
-let elem1::elem2::rest = [1..10]       // ignore the warning for now
-#warn "25"
+let elem1::elem2::rest = [1..10]        // ignore the warning for now
 
 // matching lists inside a match..with
 let listMatcher aList =
@@ -552,6 +551,7 @@ printfn "\n"
 type Result<'a, 'b> = // define a "union" of two different alternatives
     | Success of 'a   // 'a means generic type. The actual type will be determined when it is used.
     | Failure of 'b   // generic failure type as well
+//    | Indeterminate
 
 // define all possible errors
 type FileErrorReason =
@@ -564,6 +564,9 @@ let performActionOnFile action filePath =
       // open file, do the action and return the result
       use sr = new System.IO.StreamReader(filePath:string)
       let result = action sr  // do the action to the reader
+      //match System.IO.Path.GetExtension(filePath).ToLower() with
+      //| ".txt" -> Indeterminate
+      //| _ -> Success(result)
       Success (result)        // return a Success
    with      // catch some exceptions and convert them to errors
       | :? System.IO.FileNotFoundException as ex
@@ -657,3 +660,4 @@ printfn ""
 
 
 // --------------------------------
+
