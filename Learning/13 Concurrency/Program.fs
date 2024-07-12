@@ -1,7 +1,8 @@
-﻿// 13 Why 2
-// Learning F#, Exercises based on "Why using F#?", Part 2
+﻿// 13 Concurrency
+// Learning F#, Exercises based on "Why using F#?", Part 2, Concurrency
 //
-// 2024-07-12   PV
+// 2024-07-11   PV
+// 2024-07-12   PV      Refactored to use HeetClient instead of WebRequest (deprecated)
 
 // Traditional asynchronous programming
 //
@@ -227,14 +228,18 @@ let sleep2 = sleepWorkflowMs 2000
 // So here is a simple URL downloader, very similar to the one we saw at the start of the series:
 
 open System.Net
+open System.Net.Http
 open System
 open System.IO
 let fetchUrl url =
-    let req = WebRequest.Create(Uri(url))
-    use resp = req.GetResponse()
-    use stream = resp.GetResponseStream()
-    use reader = new IO.StreamReader(stream)
-    let html = reader.ReadToEnd()
+    //let req = WebRequest.Create(Uri(url))
+    //use resp = req.GetResponse()
+    //use stream = resp.GetResponseStream()
+    //use reader = new IO.StreamReader(stream)
+    //let html = reader.ReadToEnd()
+    let cli = new HttpClient()
+    let html = cli.GetStringAsync(Uri(url)).Result
+
     printfn "finished downloading %s" url
 
 // And here is some code to time it:
@@ -259,11 +264,14 @@ open Microsoft.FSharp.Control.CommonExtensions
 // Fetch the contents of a web page asynchronously
 let fetchUrlAsync url =
     async {
-        let req = WebRequest.Create(Uri(url))
-        use! resp = req.AsyncGetResponse()  // new keyword "use!"
-        use stream = resp.GetResponseStream()
-        use reader = new IO.StreamReader(stream)
-        let html = reader.ReadToEnd()
+        //let req = WebRequest.Create(Uri(url))
+        //use! resp = req.AsyncGetResponse()  // new keyword "use!"
+        //use stream = resp.GetResponseStream()
+        //use reader = new IO.StreamReader(stream)
+        //let html = reader.ReadToEnd()
+        let cli = new HttpClient()
+        let html = cli.GetStringAsync(Uri(url)).Result
+
         printfn "finished downloading %s" url
         }
 

@@ -3,8 +3,8 @@
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
-		<RootNamespace>FS12</RootNamespace>
-		<Description>Learning F#, Exercises based on "Why using F#?"</Description>
+		<RootNamespace>FS14</RootNamespace>
+		<Description>Learning F#, Exercises based on "Why using F#?, Part 3, Messages and Agents"</Description>
 		<Authors>Pierre Violent</Authors>
 		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
 	</PropertyGroup>
