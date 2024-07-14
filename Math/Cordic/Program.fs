@@ -9,15 +9,6 @@ let cordicCompute angle =
     // Note that angle is expressed in radians, but CORDIC algorithm does not care about it, just
     // change initial variable a to 45 to work in degrees for instance
 
-    // Start at π/4, with both sin and cos = (√2)/2
-    let a = π / 4.0
-    let s = Math.Sqrt(2.0) / 2.0
-    let c = s
-
-    // Start with horizontal unitary vector for result
-    let vcos = 1.0
-    let vsin = 0.0
-
     let rec localCompute angle a vsin vcos s c =
         // If angle remaining to rotate is more than currently computed angle/s/c, we do the rotation
         let angle, vcos, vsin =
@@ -25,12 +16,13 @@ let cordicCompute angle =
                 // Standard rotation matrix times vector (cos, sin)
                 (angle - a, vcos * c - vsin * s, vcos * s + vsin * c)
             else
+                // Jusr keep current values
                 (angle, vcos, vsin)
 
-        // Compute sin and cos of half-angle for next step
+        // Continue with half-angle for next step
         let a = a / 2.0
 
-        match a < 1e-17 with
+        match a < 1e-17 with    // 
         | true -> (vsin, vcos)
         | false ->
             // Half-trig computation, sin(a/2) and cos(a/2)
@@ -41,39 +33,51 @@ let cordicCompute angle =
 
 
     match angle with
-    | 0.0 -> (vsin, vcos) // Simple time-saver
-    | _ -> localCompute angle a vsin vcos s c
+    | x when x<=5e-8 -> (angle, 1.0) // Simple result for very small angles, including 0
+    | _ -> 
+        // Start at π/4, with both sin and cos = (√2)/2
+        let a = π / 4.0
+        let s = Math.Sqrt(2.0) / 2.0
+        let c = s
+
+        // Start with horizontal unitary vector for result (the one that will be rotated)
+        let vcos = 1.0
+        let vsin = 0.0
+
+        localCompute angle a vsin vcos s c
 
 
 let sinCordic (angle: float) =
     // Get back into [0, π/2]
-    let sign = Math.Sign(angle)
-    let angle = Math.Abs(angle) % (2.0 * π) // Use modulo to be in [0,2π[
 
-    // Now get in [0,π]
+    // First use modulo of Abs to be in [0,2π[
+    let sign = Math.Sign(angle)
+    let angle = Math.Abs(angle) % (2.0 * π) 
+
+    // Now get in [0, π]: [π, 2π] = opposite of sin in [0, π]
     let (angle, sign) =
         match angle with
         | x when x < π -> (angle, sign)
         | _ -> (angle - π, -sign)
 
-    // Now get in [0, π/2]
+    // Now get in [0, π/2]: sin is symmtric around x=π/2
     let angle =
         match angle with
         | x when x > π / 2.0 -> π - angle
         | _ -> angle
 
-    let (vsin, _) = cordicCompute (angle)
+    let (vsin, _) = cordicCompute angle
 
     match sign with
     | 1 -> vsin
     | 0 -> 0.0
     | _ -> if vsin = 0.0 then vsin else -vsin // Don't want to return -0.0
 
-// Simple version, but should probably have code ressembling to sinCordic 
+// Simple version, but should probably have code ressembling to sinCordic using cos period and symmetries
 let cosCordic angle = sinCordic (angle + π / 2.0)
 
 
-// Tests, just use Float64
+// Tests, plot a sine curve from -9.75 to +9.75 (keep formatting on 5 characters)
 for z in [-9.75..0.25..9.9] do
     let s = sinCordic(z)
     printf "sin(%5.2f) = {%15.12f} " z s
@@ -92,5 +96,13 @@ printfn "Maple:  c=0.378740326955891541643393287014\ts=0.92550297932386169865373
 
 
 // Just checking I'm not working at HP, sin(π) is zero! :-)
-let ans = sinCordic (π)
-printfn "Cordic sin(π):  %g" ans
+let ans1 = sinCordic π
+printfn "Cordic sin(π):       %f" ans1
+let ans2 = sinCordic 1e-12
+printfn "Cordic sin(1e-12):   %.15e" ans2
+
+// This is wrong at the 5th decimal, this is normal because sin(π-1e12) is computed as sin((π-1e12)-π),
+// and because of float rounding value, the result of (π-1e12)-π is 1.000088900582341e-12 and not 1e-12
+// so the result is 1.000088900582341e-12...
+let ans3 = sinCordic (π-1e-12)
+printfn "Cordic sin(π-1e-12): %.15e" ans3
