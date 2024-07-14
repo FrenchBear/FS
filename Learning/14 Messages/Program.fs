@@ -4,8 +4,8 @@
 // 2024-07-12   PV
 
 
-let pause (duration:int) =
-    let sleepWorkflow = async { do! Async.Sleep duration }
+let pause duration =
+    let sleepWorkflow = async { do! Async.Sleep (millisecondsDueTime=duration) }    // Use parameter name resolve overloads
     Async.RunSynchronously sleepWorkflow
 
 // One-liner version

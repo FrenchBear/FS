@@ -542,11 +542,26 @@ let fizzBuzz i =
 printfn "\n"
 
 
+let (|Digit|Letter|Whitespace|Other|) ch =
+   if System.Char.IsDigit(ch) then Digit
+   else if System.Char.IsLetter(ch) then Letter
+   else if System.Char.IsWhiteSpace(ch) then Whitespace
+   else Other
+
+let printChar ch =
+  match ch with
+  | Digit -> printfn "%c is a Digit" ch
+  | Letter -> printfn "%c is a Letter" ch
+  | Whitespace -> printfn "%c is a Whitespace" ch
+  | _ -> printfn "%c is something else" ch
+
+// print a list
+['a';'b';'1';' ';'-';'c'] |> List.iter printChar
+printfn ""
 
 
 // --------------------------------
 // Exhaustive pattern matching as an error handling technique
-
 
 type Result<'a, 'b> = // define a "union" of two different alternatives
     | Success of 'a   // 'a means generic type. The actual type will be determined when it is used.
@@ -718,6 +733,103 @@ type CustomerAccount = {CustomerAccountId: int}
 
 let x = {CustomerAccountId = 1}
 
+// Only work for global type, not members
 // x = x       // error!
 x.CustomerAccountId = x.CustomerAccountId |> ignore // no error
 
+
+
+// --------------------------------
+// Creating objects from interface
+
+// create a new object that implements IDisposable
+let makeResource name =
+    { new System.IDisposable with
+        member this.Dispose() = printfn "%s disposed" name 
+    }
+
+let useAndDisposeResources =
+    use r1 = makeResource "first resource"
+    printfn "using first resource"
+    for i in [1..3] do
+        let resourceName = sprintf "inner resource %d" i
+        use temp = makeResource resourceName
+        printfn "    do something with %s" resourceName
+    use r2 = makeResource "second resource"
+    printfn "using second resource"
+    printfn "done."
+printfn ""
+
+
+
+// --------------------------------
+// Mixing .NET interfaces with pure F# types
+
+// The ability to create instances of an interface on the fly means that it is easy to mix and match interfaces from
+// existing APIs with pure F# types.
+// For example, say that you have a preexisting API which uses the IAnimal interface, as shown below.
+type IAnimal =
+   abstract member MakeNoise : unit -> string
+
+let showTheNoiseAnAnimalMakes (animal:IAnimal) =
+   animal.MakeNoise() |> printfn "Making noise %s"
+
+// But we want to have all the benefits of pattern matching, etc., so we have created pure F# types for cats and dogs
+// instead of classes.
+type Cat = Felix | Garfield
+type Dog = Butch | Lassie
+
+// But using this pure F# approach means that that we cannot pass the cats and dogs to the showTheNoiseAnAnimalMakes
+// function directly.
+// However, we don’t have to create new sets of concrete classes just to implement IAnimal. Instead, we can dynamically
+// create the IAnimal interface by extending the pure F# types.
+
+// now mixin the interface with the F# types
+type Cat with
+   member this.AsAnimal =
+        { new IAnimal
+          with member a.MakeNoise() = "Meow" }
+
+type Dog with
+   member this.AsAnimal =
+        { new IAnimal
+          with member a.MakeNoise() = "Woof" }
+
+let dog = Lassie
+showTheNoiseAnAnimalMakes (dog.AsAnimal)
+
+let cat = Felix
+showTheNoiseAnAnimalMakes (cat.AsAnimal)
+
+printfn ""
+
+
+
+// --------------------------------
+// Using reflection to examine F# types
+
+// F# gets the benefit of the .NET reflection system, which means that you can do all sorts of interesting things that
+// are not directly available to you using the syntax of the language itself. The Microsoft.FSharp.Reflection namespace
+// has a number of functions that are designed to help specifically with F# types.
+// For example, here is a way to print out the fields in a record type, and the choices in a union type.
+
+open System.Reflection
+open Microsoft.FSharp.Reflection
+
+// create a record type...
+type Account = {Id: int; Name: string}
+
+// ... and show the fields
+let fields =
+    FSharpType.GetRecordFields(typeof<Account>)
+    |> Array.map (fun propInfo -> propInfo.Name, propInfo.PropertyType.Name)
+printfn "%A" fields
+
+// create a union type...
+type public Choices = | A of int | B of string
+
+// ... and show the choices
+let choices =
+    FSharpType.GetUnionCases(typeof<Choices>)
+    |> Array.map (fun choiceInfo -> choiceInfo.Name)
+printfn "%A" choices
