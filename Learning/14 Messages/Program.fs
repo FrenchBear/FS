@@ -8,6 +8,9 @@ let pause (duration:int) =
     let sleepWorkflow = async { do! Async.Sleep duration }
     Async.RunSynchronously sleepWorkflow
 
+// One-liner version
+// let pause (ms:int) = async { do! Async.Sleep ms} |> Async.RunSynchronously
+
 
 // A simple example
 
@@ -52,7 +55,6 @@ simpleMailboxExample ()
 
 open System
 open System.Threading
-open System.Diagnostics
 
 // a utility function
 type Utility() =
@@ -65,7 +67,6 @@ type Utility() =
 type MessageBasedCounter() =
 
     static let updateState (count, sum) msg =
-        // increment the counters and...
         let newSum = sum + msg
         let newCount = count + 1
         printfn "Count is: %i. Sum is: %i" newCount newSum
@@ -89,25 +90,25 @@ type MessageBasedCounter() =
 
     // public interface to hide the implementation
     // Do not add call updateState directly, but send a message
-    // Messages are queued, executed one at a time, so there's no race issues in case of
+    // Messages are queued (serialized), executed one at a time, so there's no race issues in case of
     // parallel execution, and no need to use lock
     static member Add i = agent.Post i
 
 
 let test() =
     // Create a task that will try to access the counter:
-    let makeCountingTask addFunction taskId  = async {
+    let makeCountingTask addFunction = async {
         for i in [1..3] do
             addFunction i
         }
 
-    let task = makeCountingTask MessageBasedCounter.Add 1
+    let task = makeCountingTask MessageBasedCounter.Add
 
     // Finally let’s create 5 child tasks that try to access the counter at once.
     printfn "\n5 child tasks accessing the counter at once"
     let messageExample5 =
         [1..5]
-            |> List.map (fun i -> makeCountingTask MessageBasedCounter.Add i)
+            |> List.map (fun i -> makeCountingTask MessageBasedCounter.Add)
             |> Async.Parallel
             |> Async.RunSynchronously
             |> ignore
@@ -116,7 +117,6 @@ let test() =
     printfn "test done.\n"
 
 test()
-
 
 
 // --------------------------------------------------------------
