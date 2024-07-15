@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<Description>Fraction Development in F#</Description>
+		<Authors>Pierre Violent</Authors>
+		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Include="Program.fs" />
+	</ItemGroup>
+
+</Project>

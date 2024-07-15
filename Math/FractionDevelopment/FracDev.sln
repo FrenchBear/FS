@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35027.167
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FracDev", "FracDev.fsproj", "{84F30E0C-A8D0-4A83-A7EB-E7547A9975F5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{84F30E0C-A8D0-4A83-A7EB-E7547A9975F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84F30E0C-A8D0-4A83-A7EB-E7547A9975F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84F30E0C-A8D0-4A83-A7EB-E7547A9975F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84F30E0C-A8D0-4A83-A7EB-E7547A9975F5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B4FBB2E3-C60B-41F5-B2EB-B54479FDC281}
+	EndGlobalSection
+EndGlobal
