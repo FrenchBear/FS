@@ -27,8 +27,8 @@ let cordicCompute angle =
         | false ->
             // Half-trig computation, sin(a/2) and cos(a/2)
             let c2 = c
-            let c = Math.Sqrt((c + 1.0) / 2.0)
-            let s = s / Math.Sqrt(2.0 * (1.0 + c2))
+            let c = sqrt((c + 1.0) / 2.0)
+            let s = s / sqrt(2.0 * (1.0 + c2))
             localCompute angle a vsin vcos s c
 
 
@@ -37,7 +37,7 @@ let cordicCompute angle =
     | _ -> 
         // Start at π/4, with both sin and cos = (√2)/2
         let a = π / 4.0
-        let s = Math.Sqrt(2.0) / 2.0
+        let s = sqrt(2.0) / 2.0
         let c = s
 
         // Start with horizontal unitary vector for result (the one that will be rotated)
@@ -51,8 +51,8 @@ let sinCordic (angle: float) =
     // Get back into [0, π/2]
 
     // First use modulo of Abs to be in [0,2π[
-    let sign = Math.Sign(angle)
-    let angle = Math.Abs(angle) % (2.0 * π) 
+    let sign = sign(angle)
+    let angle = abs(angle) % (2.0 * π) 
 
     // Now get in [0, π]: [π, 2π] = opposite of sin in [0, π]
     let (angle, sign) =
@@ -90,7 +90,7 @@ let a0 = 1.1823614786
 let (vsin, vcos) = cordicCompute (a0)
 
 printfn "a=%f" a0
-printfn "Math:   c=%.16f\t\t\ts=%.16f\t\t\t(Math.Cos and Math.Sin)" (Math.Cos(a0)) (Math.Sin(a0))
+printfn "Math:   c=%.16f\t\t\ts=%.16f\t\t\t(Math.Cos and Math.Sin)" (cos(a0)) (sin(a0))
 printfn "Cordic: c=%.16f\t\t\ts=%.16f\t\t\t(Cordic Cos and Sin)" vcos vsin
 printfn "Maple:  c=0.378740326955891541643393287014\ts=0.925502979323861698653734026619\n"
 

@@ -21,7 +21,7 @@ let doubleToFraction (f: float) =
             | x when x < 0 -> (-1, -f)
             | _ -> (1, f)
 
-        let off = int (Math.Floor(f))
+        let off = int (floor(f))
         let f = f - (float off)
 
         let rec internalLoop (infNum: int) (infDen: int) (supNum: int) (supDen: int) =
@@ -30,7 +30,7 @@ let doubleToFraction (f: float) =
             let r = (float rNum) / (float rDen)
 
             match r - f with
-            | x when Math.Abs(x) < ε -> (copySign (rNum + off * rDen) sign, rDen)
+            | x when abs(x) < ε -> (copySign (rNum + off * rDen) sign, rDen)
             | x when x < 0 -> internalLoop rNum rDen supNum supDen // r<f
             | _ -> internalLoop infNum infDen rNum rDen // r>f
 
