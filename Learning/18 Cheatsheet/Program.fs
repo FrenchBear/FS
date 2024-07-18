@@ -91,19 +91,44 @@ printfn $"{let mutable a='{'
            let n='2'
 #endif
            let b='}'
+           let anonRecord1 = {| Lettre='}'; Age = 999 |}
            let concat2 x y = x.ToString()+y.ToString()
            let concat3 x y z = concat2 (concat2 x y) z
            concat3 a n b
            }"                           // Ok for multiline including preprocessor directives, {2}
-printfn $"""{let a="{"
+
+printfn
+       $"""{let a="{"
+
 #if DEBUG
-             let n='\"'
+            let n='\"'
 #else
-             let n='\''
+            let n='\''
 #endif
-             let b="}"
-             a+n.ToString()+b
-             }"""                       // Ok for multiline with ", {"}
+            let b="}"
+
+            let getCircleStats (radius: float) =
+                {| Radius = radius
+                   Diameter = radius * 2.0
+                   Area = System.Math.PI * (radius ** 2.0)
+                   Circumference = 2.0 * System.Math.PI * radius |}
+
+            // Signature
+            let printCircleStats (circle: {| Radius: float; Area: float; Circumference: float; Diameter: float |}) =
+                    printfn $"Circle with R=%f{circle.Radius}; D=%f{circle.Diameter}; A=%f{circle.Area}; C=%f{circle.Circumference}"
+
+            let cc = getCircleStats 2.0
+
+            let anonRecord1 = {| 
+                Lettre = '}'
+                Chaine = "{[("; 
+                SubRecord =  {| Nom="Violent"; Prenom="Pierre"; AnneeDeNaissance=1965; t=(1,"Hello",'√',0xCAFE) |}
+                Age = (999,44) |}
+
+            let anonRecord2 = {| anonRecord1 with SubRecord = {| Nom="Violent"; Prenom="Jacques"; AnneeDeNaissance=1969 |} |}
+
+            a+n.ToString()+b
+            }"""                       // Ok for multiline with ", {"}
 
 printfn "\n"
 
@@ -145,8 +170,6 @@ let another = $$$"""A string with pairs of {{ and }} characters and {{{ "an F# e
 let percent = $$"""50% of 20 is %%.1f{{20m * 0.5m}}"""
 // "50% of 20 is 10.0"
 
-
-
 // ----------------------------------------------------------------------------------------
 // Basic types and litterals
 
@@ -158,10 +181,10 @@ let myExplicitlyTypedIntValue: int = 10
 let mutable myMutableInt = 10
 myMutableInt <- 11  // use <- arrow to assign a new value
 
-
 // Integer Prefixes for hexadecimal, octal, or binary:
-let numbers = (0x9F, 0o77, 0b1010)  // (159, 63, 10)
-
+let numbers = (0xcafe, 0x9F, 0o77, 0b1010)  // (51966, 159, 63, 10)
+let numbers2 = (0x1101lf, 0o77lf, 0x3Blf)
+let numbers3 = (0x1101LF, 0x3BLF)           // 0o771LF is not allowed while 0o771lf is allowed...
 
 // Integer suffixes
 let ( sbyte, byte   )  = ( 55y, 55uy )  // 8-bit integer
@@ -412,6 +435,8 @@ let inline sum t = Array.reduce (+) t
 
 let sf = sum [| 1.0; 2.0; 3.0 |]
 let si = sum [| 1; 2; 3 |]          // Without inline in sum definition, this would work but return a float...
+
+let dq1 = ``sf``
 
 // End of pause
 // ----------------------------------------------------------------------------------------
