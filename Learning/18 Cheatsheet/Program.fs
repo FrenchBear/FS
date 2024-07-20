@@ -10,7 +10,7 @@
 
 // Line comment
 /// XMLDoc comment
-(* block (* "*)" *) comment *)
+(* block comment *)
 
 // Next block comment is an error, content of comment is parsed, here it contains an unfinished triple-quote string, *) is skipped
 // (* """ *)    
@@ -201,7 +201,8 @@ let decimal            = 50.0m          // signed 128-bit decimal
 let mybyte             = 'a'B           // ascii character; 97uy
 let byteArray          = "text"B        // ascii string; [|116uy; 101uy; 120uy; 116uy|]
 
-
+let az01:sbyte = 55y
+let az02:byte = 55uy
 
 // ----------------------------------------------------------------------------------------
 // Functions
@@ -257,9 +258,12 @@ type RequestB = { Id: string; IntValue: int }
 let requestA: RequestA = { Id = "A"; StringValue = "Value" }
 let requestB: RequestB = { Id = "B"; IntValue = 42 }
 
+// In generic info between <...>, generic types can start with ' such as 'T or 'a...
 let inline getId<'T when 'T : (member Id: string)> (x: 'T) = x.Id
 let idA = getId requestA  // "A"
 let idB = getId requestB  // "B"
+
+type C<'T> = 'T * 'T
 
 
 // ----------------------------------------------------------------------------------------
@@ -415,6 +419,11 @@ printfn "r5 = %d" r5
 // And they also have a compiled name, see F# spec for naming
 let r6 = op_PlusPlusPlusPlus 2 3
 printfn "r6 = %d" r6
+
+// ' is valid in identifier name (but cannot start with ')
+let a = sin
+let a' = cos
+let a'' = sin >> ((*) -1.0)
 
 module Zap =
     let (%%%) x = -x
@@ -687,6 +696,29 @@ let handleErrors x y =
 
 
 // ----------------------------------------------------------------------------------------
+// Simple quotes
+
+let simple_char = 'A'
+let escape_chars = [ '\n'; '\t'; '\r'; '\b'; '\a'; '\f'; '\v'; '\''; '\\']
+let hex2 = '\x1F'
+let tri = '\033'
+let uni4 = '\u0041'
+let uni8 = '\U00000041'
+
+let byte_simple = 'A'B
+let byte_escape = '\n'B
+let byte_tri = '\033'B
+let byte_uni4 = '\u0041'B
+
+let f x = x**3.0
+let f' x = 3.0*x**2.0
+let f'' x = 6.0*x
+let f''' x = 6.0
+
+type C1<'T> = 'T * 'T
+type C2<'T,'U> = 'T * 'U
+
+
+
+// ----------------------------------------------------------------------------------------
 // Classes and inheritance
-
-
