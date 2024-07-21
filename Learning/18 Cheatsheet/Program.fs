@@ -271,8 +271,8 @@ type C<'T> = 'T * 'T
 
 // functions that take unit as arguments and return different Collection types
 let getList(): int list = [1;2;3;4]
-let hetArray: int[] = [| 1;2;3 |]
-let getSeq (): int seq = new System.Collections.Generic.List<int>()
+let getArray(): int array = [| 1;2;3 |]
+let getSeq(): int seq = new System.Collections.Generic.List<int>()
 
 
 // Lists
@@ -459,6 +459,8 @@ let dq1 = ``sf``
 // Construction
 let numberAndWord = (1, "Hello")
 let numberAndWordAndNow = (1, "Hello", System.DateTime.Now)
+let structTuple = struct (1, "Hello")       // Struct tuple is equivalent to C# tuple
+let structTuple2 = struct (1.025f, 1.5f)
 
 // Deconstruction
 let (numberZ, wordZ) = numberAndWord
@@ -482,6 +484,7 @@ let printNumberAndWord' (number, word) = printfn $"%d{number}: %s{word}"
 let (success, outParsedDateTime) = System.DateTime.TryParse("2001/02/06")
 
 
+// -------------------------
 // Records
 // Records represent aggregates of named values. They are sealed classes with extra toppings: default immutability,
 // structural equality, and pattern matching support.
@@ -510,16 +513,20 @@ let isPaul person =
     | _ -> false
 
 
-// Anonymous Records
+// Anonymous Records {|   |}
 // Anonymous Records represent aggregates of named values, but do not need declaring before use.
 
 // Create
 let anonRecord1 = {| Name = "Don Syme"; Language = "F#"; Age = 999 |}
+let anonStructRecord = struct {| Name = "Don Syme"; Language = "F#"; Age = 999 |}
+
 
 // Copy and Update
 let anonRecord2 = {| anonRecord1 with Name = "Mads Torgersen"; Language = "C#" |}
 
-let getCircleStats (radius: float) =
+let getAnonymousRecord(): {| Name:string; FirstName:string |}  = {| Name="Violent"; FirstName="Pierre" |}
+
+let getCircleStats radius =
     {| Radius = radius
        Diameter = radius * 2.0
        Area = System.Math.PI * (radius ** 2.0)
@@ -533,6 +540,7 @@ let cc = getCircleStats 2.0
 printCircleStats cc
 
 
+// -------------------------
 // Discriminated Unions
 // Discriminated unions (DU) provide support for values that can be one of a number of named cases, each possibly with
 // different values and types.
@@ -540,7 +548,7 @@ printCircleStats cc
 // Declaration
 type Interaction =
     | Keyboard of char
-    | KeyboardWithModifier of letter: char * modifier: System.ConsoleModifiers  // Tuples accepted names here...
+    | KeyboardWithModifier of letter: char * modifier: System.ConsoleModifiers  // Tuples accept names here...
     | MouseClick of countOfClicks: int
 
 // Create
@@ -557,7 +565,21 @@ match interaction3 with
 |   MouseClick (countOfClicks = x) -> $"Clicked: {x}"
 |> ignore
 
+// Can have named tuples using discriminated union, out of discriminated union named tuples don't exist...
+type NamedTuple = NamedTuple of nom:string * age:int
+let value = NamedTuple(nom="Pierre", age=58)
 
+// Can use anonymous directly record in discriminated union...
+type NamedRecord = NamedRecord of {| nom: string; age:int |}    
+let reco = NamedRecord {| nom="Pierre"; age=58 |}
+
+// But it doesn't work for records, they must be defined first to be used in a discriminated union
+type PerRec = { nom: string; age:int }
+type PerRecRec = PerRecRec of PerRec
+let recrec = PerRecRec { nom="Pierre"; age=58 }
+
+
+// -------------------------
 // Generics
 type Tree<'T> =
     | Node of Tree<'T> * 'T * Tree<'T>
@@ -722,3 +744,5 @@ type C2<'T,'U> = 'T * 'U
 
 // ----------------------------------------------------------------------------------------
 // Classes and inheritance
+
+    
