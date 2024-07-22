@@ -488,6 +488,7 @@ let (success, outParsedDateTime) = System.DateTime.TryParse("2001/02/06")
 // Records
 // Records represent aggregates of named values. They are sealed classes with extra toppings: default immutability,
 // structural equality, and pattern matching support.
+// Record fields can be mutable.
 
 // Declare
 type Person = { Name: string; Age: int }
@@ -498,6 +499,12 @@ type Car =
 
 // Create
 let paul = { Name = "Paul"; Age = 28 }
+
+// Deconstruct, dot notation
+let paulName = paul.Name
+
+// Deconstruct, pattern-matching
+let {Name=zzname; Age=zzage} = paul
 
 // Copy and Update
 let paulsTwin = { paul with Name = "Jim" }
@@ -513,13 +520,15 @@ let isPaul person =
     | _ -> false
 
 
+
 // Anonymous Records {|   |}
 // Anonymous Records represent aggregates of named values, but do not need declaring before use.
+// Anonymous records do not support pattern matching, unlike named records (https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/anonymous-records)
+// It is not currently possible to define an anonymous record with mutable data.
 
 // Create
 let anonRecord1 = {| Name = "Don Syme"; Language = "F#"; Age = 999 |}
 let anonStructRecord = struct {| Name = "Don Syme"; Language = "F#"; Age = 999 |}
-
 
 // Copy and Update
 let anonRecord2 = {| anonRecord1 with Name = "Mads Torgersen"; Language = "C#" |}
@@ -539,6 +548,14 @@ let printCircleStats (circle: {| Radius: float; Area: float; Circumference: floa
 let cc = getCircleStats 2.0
 printCircleStats cc
 
+// Deconstruct, dot notation
+let zzzName = anonRecord1.Name
+
+// Deconstruct, pattern-matching doesn't work: Anonymous records do not support pattern matching
+// Only parameters can do a kind of pattern-maching deconstruct:
+let circleDeconstructor (circle: {| Radius: float; Area: float; Circumference: float; Diameter: float |}) =
+    (circle.Radius, circle.Area, circle.Circumference, circle.Diameter)
+let (wwwRadius, wwwArea, wwwCircumference, wwwDiameter) = circleDeconstructor cc
 
 // -------------------------
 // Discriminated Unions
@@ -555,6 +572,7 @@ type Interaction =
 let interaction1 = MouseClick 1
 let interaction2 = MouseClick (countOfClicks = 2)
 let interaction3 = KeyboardWithModifier ('c', System.ConsoleModifiers.Control)
+let interaction4 = KeyboardWithModifier ('c', modifier=System.ConsoleModifiers.Control)
 
 // Pattern matching
 match interaction3 with
@@ -567,16 +585,57 @@ match interaction3 with
 
 // Can have named tuples using discriminated union, out of discriminated union named tuples don't exist...
 type NamedTuple = NamedTuple of nom:string * age:int
-let value = NamedTuple(nom="Pierre", age=58)
+let pierre = NamedTuple(nom="Pierre", age=58)
+
+// Deconstruct a single-case discriminated union (but see next comment)
+let namedTupleDeconstructor nt =
+    match nt with
+    | NamedTuple (n, a) -> (n,a)
+let (myName, myAge) = namedTupleDeconstructor pierre
+
+// Actually, desconstruction of a single-case using pattern-matching IS possible, and direct:
+let (NamedTuple (fgA, fgB)) = pierre
+assert(fgA="Pierre")
+assert(fgB=58)
+
+// Example from cheatsheet:
+// Single-case discriminated unions are often used to create type-safe abstractions with pattern matching support:
+type OrderId = Order of string
+let orderId = Order "12"
+let (Order id) = orderId  // id = "12"
+
 
 // Can use anonymous directly record in discriminated union...
 type NamedRecord = NamedRecord of {| nom: string; age:int |}    
 let reco = NamedRecord {| nom="Pierre"; age=58 |}
 
+let namedRecordDeconstructor nt =
+    match nt with
+    | NamedRecord namr -> (namr.nom, namr.age)
+let (ymName, ymAge) = namedRecordDeconstructor reco
+
 // But it doesn't work for records, they must be defined first to be used in a discriminated union
 type PerRec = { nom: string; age:int }
 type PerRecRec = PerRecRec of PerRec
 let recrec = PerRecRec { nom="Pierre"; age=58 }
+
+
+// Deconstruction of a more complex discriminated union
+type ComplexDU = 
+    | Character of char
+    | PairOrIntegers of Item1:int * Item2:int
+    | NamedTuple of NamedTuple
+
+
+// Combining match and defaultArg we can extract a simple char, or '?' if it's not a "Character"
+let deconstructComplexDUCharacter nt =
+    defaultArg (match nt with
+                | Character ch -> Some ch
+                | _ -> None) '?'
+
+let ccdu = Character 'ω'
+let ch = deconstructComplexDUCharacter ccdu     // Get a char
+
 
 
 // -------------------------
@@ -590,6 +649,8 @@ let rec depth node =
     | Node (l, _, r) -> 1 + max (depth l) (depth r)
     | Leaf -> 0
 
+
+// -------------------------
 // F# Core has built-in discriminated unions for error handling, e.g., option and Result.
 let optionPatternMatch input =
     match input with
@@ -601,14 +662,16 @@ let resultPatternMatch input =
     | Ok value -> $"Input: %d{value}"
     | Error value -> $"Error: %d{value}"
 
-// Single-case discriminated unions are often used to create type-safe abstractions with pattern matching support:
-type OrderId = Order of string
 
-// Create a DU value
-let orderId = Order "12"
+let res1 = Ok 42                    // Result<int, 'a>
+let res2 = Error "Y'a un bug!"      // Result<'a, string>
 
-// Use pattern matching to deconstruct single-case DU
-let (Order id) = orderId  // id = "12"
+let randomResult =                  // Result<float, byte>
+    let rnd = new System.Random()
+    match rnd.Next(maxValue=2) with
+    | 0 -> Ok (rnd.NextDouble())
+    | _ -> Error 44uy
+
 
 
 // ----------------------------------------------------------------------------------------
