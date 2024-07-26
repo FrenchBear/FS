@@ -808,4 +808,176 @@ type C2<'T,'U> = 'T * 'U
 // ----------------------------------------------------------------------------------------
 // Classes and inheritance
 
-    
+// Example of a class with (1) local let bindings, (2) properties, (3) methods, and (4) static members.
+type Vector(x: float, y: float) =
+    let mag = sqrt(x * x + y * y) // (1)
+
+    member _.X = x // (2)
+    member _.Y = y
+    member _.Mag = mag
+    member _.Scale(s) = // (3)
+        Vector(x * s, y * s)
+
+    static member (+) (a : Vector, b : Vector) = // (4)
+        Vector(a.X + b.X, a.Y + b.Y)
+
+// Call a base class from a derived one; Inheritance
+type Animal() =
+    member _.Rest() = ()
+
+type Dog() =
+    inherit Animal()
+    member _.Run() =
+        base.Rest()
+
+// Upcasting is denoted by :> operator
+let dog = Dog()
+let animal = dog :> Animal
+
+// Dynamic downcasting (:?>) might throw an InvalidCastException if the cast doesn't succeed at runtime.
+let shouldBeADog = animal :?> Dog
+
+
+
+// ----------------------------------------------------------------------------------------
+// Interfaces and Object Expressions
+
+// Declare IVector interface and implement it in Vector.
+type IVector =
+    abstract Scale : float -> IVector
+
+type Vektor(x, y) =
+    interface IVector with
+        member _.Scale(s) =
+            Vektor(x * s, y * s) :> IVector
+    member _.X = x
+    member _.Y = y
+
+// Another way of implementing interfaces is to use object expressions.
+type ICustomer =
+    abstract Name : string
+    abstract Age : int
+
+let createCustomer name age =
+    { new ICustomer with
+        member __.Name = name
+        member __.Age = age }
+
+
+
+// ----------------------------------------------------------------------------------------
+// Active Patterns (active recognizers)
+
+// Single-case active patterns
+// Single-case active patterns can be thought of as a simple way to convert data to a new form.
+
+// Basic
+open System.Text.RegularExpressions
+let (|EmailDomain|) email =
+    let match' = Regex.Match(email, "@(.*)$")
+    if match'.Success
+    then match'.Groups[1].ToString()
+    else ""
+let (EmailDomain emailDomain) = "yennefer@aretuza.org" // emailDomain = 'aretuza.org'
+
+// Note that (| is not an atomic symbol
+// Note that (| is not an atomic symbol
+let ( | FractionToDouble | ) s =
+    let ma = Regex.Match(s, @"^(\d+)/(\d+)$")
+    if ma.Success 
+    then System.Double.Parse(ma.Groups[1].ToString()) / System.Double.Parse(ma.Groups[2].ToString())
+    else System.Double.NaN
+
+let (FractionToDouble fr) = "100/23"
+printfn "100/23 = %A" fr
+
+
+// As Parameters
+open System.Numerics
+let (|Real|) (x: Complex) = (x.Real, x.Imaginary)
+let addReal (Real (real1, _)) (Real (real2, _)) = // conversion done in the parameters
+    real1 + real2
+let addRealOut = addReal Complex.ImaginaryOne Complex.ImaginaryOne
+
+// ------
+let (|FractionToNumDen|) s =
+    let ma = Regex.Match(s, @"(\d+)/(\d+)$")
+    if ma.Success 
+    then (System.Int32.Parse(ma.Groups[1].ToString()), System.Int32.Parse(ma.Groups[2].ToString()))
+    else (0, 0)
+
+// Simplified, don't call with a=0 or b=0
+let rec gcd a b =
+    if b=0 then a else gcd b (a%b)
+
+// printfn "gcd 18 12 = %A\n" (gcd 18 12)
+// printfn "gcd 100 23 = %A\n" (gcd 100 23)
+// printfn "gcd 12 18 = %A\n" (gcd 12 18)
+// printfn "gcd 23 100 = %A\n" (gcd 23 100)
+
+(*
+let rec gcd a b =
+    match (a, b) with
+    | (0, 0) -> failwith "gcd 0 0 is not defined!"
+    | (0, _) -> b
+    | (_, 0) -> a
+    | _ -> gcd b (a % b)
+*)
+
+// Dynamic matching (and decomposition) of function parameters
+let addStringFractions (FractionToNumDen (num1, den1)) (FractionToNumDen (num2, den2)) =
+    let num = num1*den2+num2*den1
+    let den = den1*den2
+    let g = gcd num den
+    $"{num/g}/{den/g}"
+let sfr = addStringFractions "1/2" "3/4"
+printfn "1/2 + 3/4 = %A" sfr
+// ------
+
+// Parameterized
+// Attention, "parameters" are not in the same order as call!!!!
+// let (|Default|) a b = c
+// let (Default a var<-c) = b
+let (|Default|) onNone value =
+    match value with
+    | None -> onNone
+    | Some e -> e
+let (Default "random citizen" name1) = None // name1 = "random citizen"
+let (Default "random citizen" name2) = Some "Steve" // name2 = "Steve"
+
+let (|Zap|) a b = 3
+let (Zap "aze" trois) = 3.1416
+printfn "tois = %A\n" trois
+
+
+// Complete active patterns
+let (|Even|Odd|) i =
+    if i % 2 = 0 then Even else Odd
+
+let testNumber i =
+    match i with
+    | Even -> printfn "%d is even" i
+    | Odd -> printfn "%d is odd" i
+
+let (|Phone|Email|) (s:string) =
+    if s.Contains '@' then Email $"Email: {s}" else Phone $"Phone: {s}"
+
+match "yennefer@aretuza.org" with // output: "Email: yennefer@aretuza.org"
+| Email email -> printfn $"{email}"
+| Phone phone -> printfn $"{phone}"
+
+
+// Partial active patterns
+// Partial active patterns share the syntax of parameterized patterns, but their active recognizers accept only one
+// argument. A Partial active pattern must return an Option<'T>.
+
+let (|DivisibleBy|_|) by n =
+    if n % by = 0
+    then Some DivisibleBy
+    else None
+
+let fizzBuzz = function
+    | DivisibleBy 3 & DivisibleBy 5 -> "FizzBuzz"
+    | DivisibleBy 3 -> "Fizz"
+    | DivisibleBy 5 -> "Buzz"
+    | i -> string i
