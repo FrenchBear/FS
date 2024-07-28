@@ -1,5 +1,5 @@
 ﻿// 20 Active patterns
-// Learning F#, Play with active patterbs
+// Learning F#, Cheatsheet, Play with active patterns
 //
 // 2024-07-25   PV
 
@@ -112,10 +112,13 @@ let (Decomp 1 1 di2) = "Hello"
 printfn "Decomp: %A\n" di2
 
 
+
+// Multi-case active pattern
+// Can only be used in a match construction
+
 let rnd = new System.Random()
 let (|Pile|Face|) x =
     if rnd.Next(2)=0 then Pile else Face
-
 
 for i in [1..10] do
     match i with
@@ -124,6 +127,12 @@ for i in [1..10] do
 printfn ""
 
 
+// This one returns something like
+// type Result =
+// | Entier of int
+// | Reel of float
+// | Autre
+// But it can only be used in a match deconstructor
 
 let (|Entier|Reel|Autre|) (str:string) =
     let tup = System.Int32.TryParse(str)
@@ -140,3 +149,17 @@ match "3,1416" with                 // Note  that Double.TryParse expects a comm
 | Reel f -> printfn "Float %A" f    // while printf use a dot in its output!
 | Autre -> printfn "Not a number"
 
+
+// Partial active pattern, use |_|
+// Must return an Option<'T>
+
+let (|DivisibleBy|_|) by n =
+    if n%by=0
+    then Some DivisibleBy
+    else None
+
+let fizzBuzz = function
+    | DivisibleBy 3 & DivisibleBy 5 -> "FizzBuzz"
+    | DivisibleBy 3 -> "Fizz"
+    | DivisibleBy 5 -> "Buzz"
+    | i -> string i
