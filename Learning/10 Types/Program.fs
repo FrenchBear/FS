@@ -1095,6 +1095,26 @@ module BuiltInNetTypes =
     printfn ""
 
 
+// ------------------------------------------------------
+// Classes (ToDo)
+
+type DS2(a:int) =
+    member _.A = a
+    member _.IncrementA() =
+        let mutable a = a+1
+        ()
+
+let ds2 = DS2(3)
+ds2.IncrementA()
+printfn "ds2.A: %d" ds2.A
+
+printfn ""
+
+
+
+// ------------------------------------------------------
+// Play with types
+
 printfn "-------------------------------\nPlay with types\n"
 
 type Chien = {Name: string; Race: string}

@@ -130,14 +130,17 @@ printfn ""
 // This one returns something like
 // type Result =
 // | Entier of int
+// | Negatif of int*iny
 // | Reel of float
 // | Autre
 // But it can only be used in a match deconstructor
 
-let (|Entier|Reel|Autre|) (str:string) =
+let (|Entier|Reel|Negatif|Autre|) (str:string) =
     let tup = System.Int32.TryParse(str)
     if (fst tup)
-    then Entier (snd tup)
+    then 
+        let i=snd tup
+        if i>0 then Entier i else Negatif(i,i)
     else
         let tupd = System.Double.TryParse(str)
         if (fst tupd)
@@ -146,6 +149,7 @@ let (|Entier|Reel|Autre|) (str:string) =
 
 match "3,1416" with                 // Note  that Double.TryParse expects a comma...
 | Entier i -> printfn "Int %d" i
+| Negatif(n1,n2) -> printfn "Negatif(%d,%d)" n1 n2
 | Reel f -> printfn "Float %A" f    // while printf use a dot in its output!
 | Autre -> printfn "Not a number"
 
