@@ -20,7 +20,7 @@ type TupleTree<'T when 'T :> System.IComparable> =
 // let rec addItemToTupleTree<'T when 'T :> System.IComparable> (root: TupleTree<'T> option) (value: 'T) : TupleTree<'T> option =
 let rec addItemToTupleTree root value =
     match root with
-    | None -> Some(Node(None, value, None)) // Reached a null nore, replace it by a new node
+    | None -> Some(Node(None, value, None)) // Reached a null node, replace it by a new node
     | Some(Node(left, nodeValue, right)) ->
         match sign (nodeValue.CompareTo(value)) with
         | 1 ->

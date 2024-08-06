@@ -270,6 +270,17 @@ module group_3 =
     // londonPersons: [{ Name = "Isaak" Town = "London" }; { Name = "Tim" Town = "London" }]
     // otherPersons: [{ Name = "Sara" Town = "Birnmingham" }; { Name = "Michelle" Town = "Manchester" }]
 
+    // Exercise
+    let rec qsort =
+        function
+        | [] -> []
+        | head::tail ->
+            let smaller, greater = tail |> List.partition (fun x -> x<head)
+            qsort smaller @ head::qsort greater
+
+    let rndlist = [ 7; 2; -2; 8; -1; 5; 3; 6; 4; 9; 0; 1]
+    printfn "sorted: %A" (qsort rndlist)
+
 
 module group_4 =
     //chunkBySize (Array, List, Seq)

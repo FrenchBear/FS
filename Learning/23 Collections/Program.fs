@@ -43,7 +43,7 @@ let f = function
   | SeqCons(x, rest) -> x
   
 let result = f a
-printfn "result: %A" result
+printfn "result: %A\n" result
 
 
 
@@ -69,3 +69,86 @@ let IOMap = Map [
 let depth = 3
 let side = 1<<<depth
 let tc = Array2D.create side side Xx    
+
+
+// ----------------------------------------------------------------------------------
+// Array mutability
+
+// Verify that an array is mutable, is passed "byref" to a function, and it remains mutable inside the function
+let tsi = [| 1;2;3;4;5 |]
+tsi[0] <- -1
+
+let testMutArray (t: int array) = 
+    t[1] <- -12
+    3.14
+
+printfn "Original array: %A" tsi
+let _ = testMutArray tsi
+printfn "Mutated array: %A\n" tsi
+
+
+// ----------------------------------------------------------------------------------
+// Iterations
+
+
+
+
+// Recursive iteration over an array, need to use index (head::tail deconstruction isn't supported by arrays)
+let productArray (ti: int array) =
+    let rec aux i acc =
+        match i with
+        | -1 -> acc
+        | _ -> aux (i-1) (acc*ti[i])
+    aux (Array.length ti - 1) 1
+
+let ti = [| 2;3;5;7;11;13 |]
+let pti = productArray ti
+printfn "pti: %A" pti
+
+
+// Recursive iteration over a list using head::tail
+let productList l =
+    let rec aux lst acc = 
+        match lst with
+        | [] -> acc
+        | head::tail -> aux tail (acc*head)
+    aux l 1
+
+let li = [2;3;5;7;11;13]
+let pli = productList li
+printfn "pli: %A" pli
+
+
+// Recursive iteration of a sequence, Seq.reduce
+let productSequence1 (s: int seq) =
+    Seq.reduce (*) s
+let si = seq {2;3;5;7;11;13}
+let psi1 = productSequence1 si
+printfn "psi1: %A" psi1
+
+// Recursive iteration of a sequence, Seq.fold
+let productSequence2 (s: int seq) =
+    Seq.fold (fun acc item -> acc*item) 1 s
+let psi2 = productSequence2 si
+printfn "psi2: %A" psi2
+
+// Recursive iteration of a sequence, Seq.iter
+let productSequence3 (s: int seq) =
+    let mutable acc = 1
+    Seq.iter (fun item -> acc <- acc*item) s
+    acc
+let psi3 = productSequence3 si
+printfn "psi3: %A" psi3
+
+// Recursive iteration of a sequence, Seq.head, seq.tail
+let productSequence4 (s: int seq) =
+    let rec aux (s: int seq) acc =
+        if Seq.isEmpty s
+        then acc
+        else 
+            let head, tail = Seq.head s, Seq.tail s
+            aux tail (head*acc)
+    aux s 1
+let psi4 = productSequence4 si
+printfn "psi4: %A" psi4
+
