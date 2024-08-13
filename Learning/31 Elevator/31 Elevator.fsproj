@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
 		<OutputType>Exe</OutputType>
-		<RootNamespace>FS30</RootNamespace>
-		<description>Learning F#, Operators and units</description>
+		<TargetFramework>net8.0</TargetFramework>
+		<RootNamespace>FS31</RootNamespace>
+		<description>Learning F#, Elevator simulation</description>
 		<Authors>Pierre Violent</Authors>
 		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
 	</PropertyGroup>
