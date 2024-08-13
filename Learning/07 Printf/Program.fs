@@ -137,7 +137,7 @@ let printRand =
     let rand = new Random()
     // return the actual printing function
     fun (tw:TextWriter) -> tw.Write(rand.Next(1,100))
-for i in [1..5] do
+for i in 1..5 do
     printfn "rand = %t" printRand
 
 // Here’s an example of custom formatting a tuple:
@@ -163,7 +163,7 @@ let yymmdd1 (date:DateTime) = date.ToString("yy.MM.dd")
 // function to format a date onto a TextWriter
 let yymmdd2 (tw:TextWriter) (date:DateTime) = tw.Write("{0:yy.MM.dd}", date)
 
-for i in [1..5] do
+for i in 1..5 do
     let date = DateTime.Now.AddDays(float i)
     // using %s
     printfn "using ToString = %s" (yymmdd1 date)

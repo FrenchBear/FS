@@ -120,7 +120,7 @@ let rnd = new System.Random()
 let (|Pile|Face|) x =
     if rnd.Next(2)=0 then Pile else Face
 
-for i in [1..10] do
+for i in 1..10 do
     match i with
     | Pile -> printf "P "
     | Face -> printf "F "

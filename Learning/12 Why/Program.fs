@@ -751,7 +751,7 @@ let makeResource name =
 let useAndDisposeResources =
     use r1 = makeResource "first resource"
     printfn "using first resource"
-    for i in [1..3] do
+    for i in 1..3 do
         let resourceName = sprintf "inner resource %d" i
         use temp = makeResource resourceName
         printfn "    do something with %s" resourceName

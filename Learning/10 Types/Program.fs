@@ -1216,6 +1216,3 @@ let ar1 = 1<article>
 let co1 = 1<commande>
 let ar2:int<article> = ar1
 // let ar2:int<article> = co1   // Error, normal!
-
-
-

@@ -140,7 +140,7 @@ let length2 = 10.0<cm> + 2.5<_>
 
 // Works when passig constants to higher order functions
 [<Measure>] type foot
-let feet = [ for i in [1.0..10.0] -> i * 1.0<foot> ]        // Ranges of floats with default step 1.0...
+let feet = [ for i in 1.0..10.0 -> i * 1.0<foot> ]        // Ranges of floats with default step 1.0...
 
 feet |> List.sum |> printfn "sum = %g"        
 //feet |> List.fold (+) 0.0 |> printfn "fold+ = %g"         // error

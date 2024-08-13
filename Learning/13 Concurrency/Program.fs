@@ -147,7 +147,7 @@ let nestedWorkflow =
 
 //Consider a simple task that prints numbers from 1 to 100:
 let testLoop = async {
-    for i in [1..100] do
+    for i in 1..100 do
         // do something
         printf "%i before.." i
         // sleep a bit
@@ -316,8 +316,8 @@ let fetchUrlAsync url =
 
 let childTask() =
     // chew up some CPU.
-    for i in [1..1000] do
-        for i in [1..10000] do
+    for i in 1..1000 do
+        for i in 1..10000 do
             do "Hello".Contains("H") |> ignore
             // we don't care about the answer!
 // Test the child task on its own.

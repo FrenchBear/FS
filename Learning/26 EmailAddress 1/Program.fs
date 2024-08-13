@@ -177,3 +177,6 @@ module EmailAddress2 =
     //let value e = apply id e
     let value (EmailAddress e) = e
 
+
+// -----------------------------------------------------------------
+IllegalStates.Test ()

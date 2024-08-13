@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35122.118
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "31 Ascenseur", "31 Ascenseur.fsproj", "{12CF916A-0625-4B6C-913E-56467522A964}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{12CF916A-0625-4B6C-913E-56467522A964}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12CF916A-0625-4B6C-913E-56467522A964}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12CF916A-0625-4B6C-913E-56467522A964}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12CF916A-0625-4B6C-913E-56467522A964}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D70BDCBC-980B-48B5-B786-241D1411E478}
+	EndGlobalSection
+EndGlobal

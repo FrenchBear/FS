@@ -98,7 +98,7 @@ type MessageBasedCounter() =
 let test() =
     // Create a task that will try to access the counter:
     let makeCountingTask addFunction = async {
-        for i in [1..3] do
+        for i in 1..3 do
             addFunction i
         }
 
@@ -140,7 +140,7 @@ slowConsoleWrite "abc\n"
 // Next, we will create a simple task that loops a few times, writing its name each time to the logger:
 let makeTask logger taskId = async {
     let name = sprintf "Task%i" taskId
-    for i in [1..3] do
+    for i in 1..3 do
         let msg = sprintf "<%s:Loop%i>\n" name i
         logger msg
     }

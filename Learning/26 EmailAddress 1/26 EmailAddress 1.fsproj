@@ -11,6 +11,7 @@
 
 	<ItemGroup>
 		<Compile Include="FinalCode.fs" />
+		<Compile Include="IllegalStates.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>
 
