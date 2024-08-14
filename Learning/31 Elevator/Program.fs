@@ -3,16 +3,16 @@
 //
 // 2024-08-13   PV      First version, only 1 cabin
 
-// ToDo: Build a clean log of events and state changes
 // ToDo: Manage elevator capacity
 // ToDo: Manage more than 1 elevator
 
+open System.Linq
 
 let traceEvents = false
-
+let randomSeed = 1
 
 // Extent of simulation
-let personsToCarry = 1
+let personsToCarry = 2
 let arrivalLength = 60
 
 // Elevator and building
@@ -24,6 +24,25 @@ let oneLevelFullSpeed = 4
 let fullSpeedBeforeDecisionDuration = 1 // and after decision before deceleration
 let openingDoorsDuration = 3 // and closing doors duration; Include delay between motor off/opening and closed/motor on
 let moveInDuration = 2 // and move out duration
+
+(*
+    One level with acceleration, decision, and deceleration: 6s
+    -+----
+     |   \
+    -+-  | Decelerating: 2s
+     |   /
+    -+-
+     |   FullSpeed: 1s
+    -+-  Decision point = half level, decide whether we continue full speed or we stop
+     |   FullSpeed: 1s
+    -+-
+     |   \
+    -+-  | Accelerating: 2s
+     |   /
+    -+----
+
+    One level with full speed, from decision point to next decision point: 4s
+*)
 
 
 type Direction =
@@ -55,12 +74,24 @@ type Clock =
 // ----------------------------------------
 // Person
 
+type PersonId = PersonId of int
+
 type Person =
-    { EntryFloor: Floor
+    { Id: PersonId
+      EntryFloor: Floor
       ArrivalTime: Clock
       ExitFloor: Floor
       EntryTime: Clock option
       ExitTime: Clock option }
+
+    member private this.calcTime (endTime: Clock option) =
+        assert(endTime.IsSome)
+        let (Clock arrival) = this.ArrivalTime
+        let (Clock endT) = endTime.Value
+        endT-arrival
+        
+    member this.waitForElevator () = this.calcTime this.EntryTime
+    member this.totalTransportation () = this.calcTime this.ExitTime
 
 // ----------------------------------------
 // Cabin
@@ -173,6 +204,38 @@ let personEventQueue =
 // ----------------------------------------
 // Modules
 
+module LoggingModule =
+    let logMessage clk msg =
+        let (Clock iClk) = clk
+        printfn $"clk: {iClk,4}\t{msg}"
+
+    let logCabinUpdate clk before after =
+        let lst = new System.Collections.Generic.List<string>()
+        if before.Floor<>after.Floor then lst.Add($"Floor {before.Floor} -> {after.Floor}")
+        if before.Motor<>after.Motor then lst.Add($"Motor {before.Motor} -> {after.Motor}")
+        if before.Door<>after.Door then lst.Add($"Door {before.Door} -> {after.Door}")
+        if before.Direction<>after.Direction then lst.Add($"Direction {before.Direction} -> {after.Direction}")
+        if before.Cabin<>after.Cabin then lst.Add($"Cabin {before.Cabin} -> {after.Cabin}")
+
+        let lstStopRequested = new System.Collections.Generic.List<string>()
+        for i in 0..levels-1 do
+            if before._StopRequested[i] <> after._StopRequested[i] then lstStopRequested.Add($"StopRequested[{i}]: {before._StopRequested[i]} -> {after._StopRequested[i]}")
+        if not (lstStopRequested.Count=0) then lst.Add(System.String.Join(", ", lstStopRequested))
+
+        let lstPersons = new System.Collections.Generic.List<string>()
+        if List.length before.Persons <> List.length after.Persons
+        then lstPersons.Add($"Persons count {List.length before.Persons} -> {List.length after.Persons}")
+        for pb in before.Persons do
+            let ixOpt = List.tryFindIndex (fun pa -> pa.Id = pb.Id) after.Persons
+            if ixOpt.IsNone then lstPersons.Add($"Person left: {pb}")
+        for pa in after.Persons do
+            let ixOpt = List.tryFindIndex (fun pb -> pb.Id = pa.Id) before.Persons
+            if ixOpt.IsNone then lstPersons.Add($"Person entered: {pa}")
+        if not (lstStopRequested.Count=0) then lst.Add(System.String.Join(", ", lstStopRequested))
+
+        if not (lst.Count=0) then logMessage clk (System.String.Join(", ", lst))
+
+     
 module ElevatorModule =
     let evt =
         { ElevatorEvent.Clock = Clock 0
@@ -189,15 +252,16 @@ module ElevatorModule =
 
     let processEvent (clk: Clock) =
         let evt = elevatorQueue.Dequeue()
+        assert (clk = evt.Clock)
+
         if traceEvents then
             printfn "\nEvevator.processEvent evt=%0A" evt
             printfn "  cabin: %0A" cabins[0]
-
-        assert (clk = evt.Clock)
+        let originalCabin = {cabins[0] with Floor = cabins[0].Floor}        // Keep a copy for final logging
 
         match evt.Event with
         | ElevatorOn ->
-            printfn "Elevator On and ready"
+            LoggingModule.logMessage clk "Elevator On and ready"
             let cabin = cabins[0]
             assert (cabin.Motor = Off)
             assert (cabin.Door = Closed)
@@ -415,6 +479,8 @@ module ElevatorModule =
 
                 elevatorQueue.Enqueue(evt, evt.Clock)
 
+        LoggingModule.logCabinUpdate clk originalCabin cabins[0]
+
 
     let callElevator (clk: Clock) (entry: Floor) (exit: Floor) =
         assert (exit <> entry)
@@ -422,8 +488,8 @@ module ElevatorModule =
             printfn "\nCalling elevator from level %A to go to level %A" entry exit
         let cabin = cabins[0]
 
-        // Actually only do something if elevator is idle; If elevator is busy, then at some point
-        // elevator will arrive
+        // Actually only do something if elevator is idle
+        // If elevator is busy, then at some point elevator will arrive
         if cabin.Cabin = Idle then
             assert (cabin.Door = Closed)
             assert (cabin.Motor = Off)
@@ -444,7 +510,7 @@ module ElevatorModule =
 
             // Otherwise we start accelerating
             else
-                cabin.setStopRequested exit
+                cabin.setStopRequested entry
 
                 cabins[0] <-
                     { cabin with
@@ -462,9 +528,9 @@ module ElevatorModule =
 module PersonModule =
     let transportedPersons = new System.Collections.Generic.List<Person>()
 
-    let rndPersons = new System.Random(1)
+    let rndPersons = new System.Random(randomSeed)
 
-    let getRandomPerson () =
+    let getRandomPerson id =
         let entry, exit =
             if rndPersons.Next(2) = 0 then
                 Floor 0, Floor(rndPersons.Next(1, levels))
@@ -473,13 +539,14 @@ module PersonModule =
 
         let arrival = Clock(rndPersons.Next(arrivalLength))
 
-        { EntryFloor = entry
+        { Id = id
+          EntryFloor = entry
           ExitFloor = exit
           ArrivalTime = arrival
           EntryTime = None
           ExitTime = None }
 
-    let personArray = [| for _ in 1..personsToCarry -> getRandomPerson () |]
+    let personArray = [| for i in 1..personsToCarry -> getRandomPerson (PersonId i) |]
 
     for p in personArray do
         let evt =
@@ -513,9 +580,28 @@ module PersonModule =
     let printFinalStats () =
         printfn "Final stats"
 
-        for p in transportedPersons do
-            printfn "  %0A" p
+        printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
+        printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
+        for p in transportedPersons.OrderBy(fun p -> p.ArrivalTime) do
+            let (PersonId pid) = p.Id
+            let (Floor entryFloor) = p.EntryFloor
+            let (Floor exitFloor) = p.ExitFloor
+            let (Clock arrivalTime) = p.ArrivalTime
+            let (Clock entryTime) = p.EntryTime.Value
+            let (Clock exitTime) = p.ExitTime.Value
 
+            let waitForElevator = entryTime-arrivalTime
+            let totalTransportTime = exitTime-arrivalTime
+
+            printfn $"  {pid,4}  {entryFloor,7} {exitFloor,7}  {arrivalTime,8} {entryTime,8} {exitTime,8}  {waitForElevator,8} {totalTransportTime,8}"
+
+        let ls = List.ofSeq transportedPersons
+        let avgWaitForElevator = double(ls |> List.sumBy (fun p -> p.waitForElevator())) / double(List.length ls)
+        let avgTotalTransport = double(ls |> List.sumBy (fun p -> p.totalTransportation())) / double(List.length ls)
+        printfn ""
+        printfn "Average wait for elevator: %4.1f" avgWaitForElevator
+        printfn "Average total transport:   %4.1f" avgTotalTransport
+        
 
 // Runs the simulation
 // In charge or master clock
