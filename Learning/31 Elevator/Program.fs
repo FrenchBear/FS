@@ -6,14 +6,36 @@
 // ToDo: Manage elevator capacity
 // ToDo: Manage more than 1 elevator
 
+//type Zap = {
+//    Id: int
+//    T: int array
+//}
+
+//let z = {Zap.Id=2; T=Array.create 3 0}
+//printfn "z = %0A" z
+////let z' = {z with Id=3; T=Array.copy z.T}
+//let z' = {z with Id=3}
+//printfn "z' = %0A" z' 
+
+//z'.T[0] <- 12
+//printfn "z' = %0A" z'
+//printfn "z = %0A" z
+
+//printfn ""
+
+System.Console.OutputEncoding <- System.Text.Encoding.UTF8
+//printfn "→↔↛↝↠↣↦↪↬↭↮↱↳↴↹⇄⇆⇉⇎⇏⇒⇔⇛⇝⇢⇥⇨⇰⇴⇶⇸⇹⇻⇼⇾⇿⍈⍼▻➔➙➛➜➝➞➟➠➡➢➣➤➥➦➧➨➩➪➫➬➭➮➯➱➲➳➵➸➺➻➼➽➾⟴⟶⟷⟹⟺⟼⟾⟿⤀⤁⤃⤄⤅⤇⤍⤏⤐⤑⤔⤕⤖⤗⤘⤚⤜⤞⤠⤳⤴⤵⤷⤸⤾⥂⥃⥄⥅⥇⥈⥰⥱⥲⥴⥵⥸⥹⦨⦪⦬⦮⦳⧴⬄⬌⬎⬏⭃⭄⭆⭇⭈⭌⭢⭤⭬⭲⭼⮀⮂⮆⮊⮌⮕⮙⮚⮞⮡⮣⮥⮧⮩⮫⮭⮯⮱⮳⮵⮷⯮📲🔀🔁🔂🔛🔜🗘🠂🠆🠊🠒🠖🠚🠞🠢🠦🠪🠮🠲🠶🠺🠾🡂🡆🡒🡘🡢🡪🡲🡺🢂🢒🢖🢚🢡🢣🢥🢦🢧🢩🢫🢱"
+//printfn ""
+
+
 open System.Linq
 
 let traceEvents = false
 let randomSeed = 1
 
 // Extent of simulation
-let personsToCarry = 2
-let arrivalLength = 60
+let personsToCarry = 10
+let arrivalLength = 300
 
 // Elevator and building
 let numberOfCabins = 1
@@ -70,6 +92,11 @@ type Clock =
         let (Clock cl) = this
         Clock(cl + offset)
 
+    member this.minus clk =
+        let (Clock cl) = this
+        let (Clock other) = clk
+        cl - other
+
 
 // ----------------------------------------
 // Person
@@ -84,14 +111,14 @@ type Person =
       EntryTime: Clock option
       ExitTime: Clock option }
 
-    member private this.calcTime (endTime: Clock option) =
-        assert(endTime.IsSome)
+    member private this.calcTime(endTime: Clock option) =
+        assert (endTime.IsSome)
         let (Clock arrival) = this.ArrivalTime
         let (Clock endT) = endTime.Value
-        endT-arrival
-        
-    member this.waitForElevator () = this.calcTime this.EntryTime
-    member this.totalTransportation () = this.calcTime this.ExitTime
+        endT - arrival
+
+    member this.waitForElevator() = this.calcTime this.EntryTime
+    member this.totalTransportation() = this.calcTime this.ExitTime
 
 // ----------------------------------------
 // Cabin
@@ -133,6 +160,11 @@ type Cabin =
     member this.clearStopRequested floor =
         let (Floor f) = floor
         this._StopRequested[f] <- false
+
+    // Need a deepCopy because of array, since an array is just a pointer to a mutable structure
+    // On the other hand, Persons is an immutable list, so there's no problem with basic record copy
+    member this.deepCopy() =
+        { this with _StopRequested = Array.copy this._StopRequested }
 
 
 let cabinInitialState =
@@ -207,36 +239,85 @@ let personEventQueue =
 module LoggingModule =
     let logMessage clk msg =
         let (Clock iClk) = clk
-        printfn $"clk: {iClk,4}\t{msg}"
+        printfn $"clk: {iClk, 4}  {msg}"
 
     let logCabinUpdate clk before after =
         let lst = new System.Collections.Generic.List<string>()
-        if before.Floor<>after.Floor then lst.Add($"Floor {before.Floor} -> {after.Floor}")
-        if before.Motor<>after.Motor then lst.Add($"Motor {before.Motor} -> {after.Motor}")
-        if before.Door<>after.Door then lst.Add($"Door {before.Door} -> {after.Door}")
-        if before.Direction<>after.Direction then lst.Add($"Direction {before.Direction} -> {after.Direction}")
-        if before.Cabin<>after.Cabin then lst.Add($"Cabin {before.Cabin} -> {after.Cabin}")
+
+        if before.Floor <> after.Floor then
+            lst.Add($"Floor {before.Floor} -> {after.Floor}")
+
+        if before.Motor <> after.Motor then
+            lst.Add($"Motor {before.Motor} -> {after.Motor}")
+
+        if before.Door <> after.Door then
+            lst.Add($"Door {before.Door} -> {after.Door}")
+
+        if before.Direction <> after.Direction then
+            lst.Add($"Direction {before.Direction} -> {after.Direction}")
+
+        if before.Cabin <> after.Cabin then
+            lst.Add($"Cabin {before.Cabin} -> {after.Cabin}")
+
 
         let lstStopRequested = new System.Collections.Generic.List<string>()
-        for i in 0..levels-1 do
-            if before._StopRequested[i] <> after._StopRequested[i] then lstStopRequested.Add($"StopRequested[{i}]: {before._StopRequested[i]} -> {after._StopRequested[i]}")
-        if not (lstStopRequested.Count=0) then lst.Add(System.String.Join(", ", lstStopRequested))
+
+        for i in 0 .. levels - 1 do
+            if before._StopRequested[i] <> after._StopRequested[i] then
+                lstStopRequested.Add($"StopRequested[{i}]: {before._StopRequested[i]} -> {after._StopRequested[i]}")
+
+        if not (lstStopRequested.Count = 0) then
+            lst.Add(System.String.Join(", ", lstStopRequested))
+
 
         let lstPersons = new System.Collections.Generic.List<string>()
-        if List.length before.Persons <> List.length after.Persons
-        then lstPersons.Add($"Persons count {List.length before.Persons} -> {List.length after.Persons}")
+
+        if List.length before.Persons <> List.length after.Persons then
+            lstPersons.Add($"Persons count {List.length before.Persons} -> {List.length after.Persons}")
+
         for pb in before.Persons do
             let ixOpt = List.tryFindIndex (fun pa -> pa.Id = pb.Id) after.Persons
-            if ixOpt.IsNone then lstPersons.Add($"Person left: {pb}")
+
+            if ixOpt.IsNone then
+                let (PersonId pid) = pb.Id
+                lstPersons.Add($"Person {pid} left")
+
         for pa in after.Persons do
             let ixOpt = List.tryFindIndex (fun pb -> pb.Id = pa.Id) before.Persons
-            if ixOpt.IsNone then lstPersons.Add($"Person entered: {pa}")
-        if not (lstStopRequested.Count=0) then lst.Add(System.String.Join(", ", lstStopRequested))
 
-        if not (lst.Count=0) then logMessage clk (System.String.Join(", ", lst))
+            if ixOpt.IsNone then
+                let (PersonId pid) = pa.Id
+                lstPersons.Add($"Person {pid} entered")
 
-     
+        if not (lstPersons.Count = 0) then
+            lst.Add(System.String.Join(", ", lstPersons))
+
+        if not (lst.Count = 0) then
+            logMessage clk (System.String.Join(", ", lst))
+
+    let logPersonArrival clk p =
+        let (PersonId person) = p.Id
+        let (Floor entry) = p.EntryFloor
+        let (Floor exit) = p.ExitFloor
+        logMessage clk $"Person {person}: Arrival on Floor {entry} to go to Floor {exit}"
+
+    let logPersonExit clk p =
+        let (PersonId pid) = p.Id
+        let (Clock arrivalClk) = p.ArrivalTime
+        let (Floor entry) = p.EntryFloor
+        let (Floor exit) = p.ExitFloor
+        let (Clock entryClk) = p.EntryTime.Value
+        let waitingCabin = entryClk - arrivalClk
+        let (Clock exitClk) = p.ExitTime.Value
+        let totalTransportationTime = exitClk - arrivalClk
+
+        logMessage
+            clk
+            $"Person {pid}: Exit on Floor {exit} at {exitClk}, Arrived on Floor {entry} at {arrivalClk}, Entered cabin at {entryClk} after waiting {waitingCabin}, Total time {totalTransportationTime}"
+
+
 module ElevatorModule =
+    // Initial event, just to check that initial state is Ok
     let evt =
         { ElevatorEvent.Clock = Clock 0
           Event = ElevatorOn }
@@ -250,6 +331,8 @@ module ElevatorModule =
             let evt = elevatorQueue.Peek()
             Some evt.Clock
 
+    let getNextElevatorEvent () = elevatorQueue.Dequeue()
+
     let processEvent (clk: Clock) =
         let evt = elevatorQueue.Dequeue()
         assert (clk = evt.Clock)
@@ -257,7 +340,9 @@ module ElevatorModule =
         if traceEvents then
             printfn "\nEvevator.processEvent evt=%0A" evt
             printfn "  cabin: %0A" cabins[0]
-        let originalCabin = {cabins[0] with Floor = cabins[0].Floor}        // Keep a copy for final logging
+
+        // Keep a deep copy for final logging
+        let originalCabin = cabins[0].deepCopy ()
 
         match evt.Event with
         | ElevatorOn ->
@@ -484,8 +569,13 @@ module ElevatorModule =
 
     let callElevator (clk: Clock) (entry: Floor) (exit: Floor) =
         assert (exit <> entry)
+
         if traceEvents then
             printfn "\nCalling elevator from level %A to go to level %A" entry exit
+
+        // Keep a deep copy for final logging
+        let originalCabin = cabins[0].deepCopy ()
+
         let cabin = cabins[0]
 
         // Actually only do something if elevator is idle
@@ -516,13 +606,43 @@ module ElevatorModule =
                     { cabin with
                         Cabin = Busy
                         Motor = Accelerating
-                        Direction = if (entry > exit) then Up else Down }
+                        Direction = if (entry > cabin.Floor) then Up else Down }
 
                 let evt =
                     { ElevatorEvent.Clock = clk.addOffset accelerationDuration
                       Event = EndAcceleration }
 
                 elevatorQueue.Enqueue(evt, evt.Clock)
+
+        // Cabin is not idle, but it may be closing doors with no direction. Update direction in this case
+        elif cabin.Direction = NoDirection then
+            if entry = cabin.Floor then
+                // Cabin is closing doors, so we cancel current event, and register a doors opening event
+                // with correct amount of time
+                // Note that this kind of manipulation should be handled by scheduler, but because of module
+                // order and dependencies order, it's directly managed here.
+                assert (cabin.Door = Closing)
+                let nextElevatorEvent = getNextElevatorEvent () // Removes the event from queue
+                assert (nextElevatorEvent.Event = EndClosingDoors)
+                let remainigTime = nextElevatorEvent.Clock.minus clk
+
+                cabins[0] <- { cabin with Door = Opening }      // Door is now opening
+
+                // And we register a new EndOpeningDoors event for the cabin
+                let evt =
+                    { ElevatorEvent.Clock = clk.addOffset (openingDoorsDuration - remainigTime)
+                      Event = EndOpeningDoors }
+
+                elevatorQueue.Enqueue(evt, evt.Clock)
+
+            else
+                // Cabin must move up or down, so we set direction and wiat for the doors to close,
+                // once the doors are closed, motor will turn on and start accelerating
+                cabins[0] <-
+                    { cabin with
+                        Direction = if (entry > cabin.Floor) then Up else Down }
+
+        LoggingModule.logCabinUpdate clk originalCabin cabins[0]
 
 
 module PersonModule =
@@ -565,23 +685,30 @@ module PersonModule =
 
     let processEvent clk =
         let evt = personEventQueue.Dequeue()
+
         if traceEvents then
             printfn "\nPerson.processEvent evt=%0A" evt
+
         assert (clk = evt.Clock)
 
         match evt.Event with
         | Arrival ->
+            LoggingModule.logPersonArrival clk evt.Person
             let prevList = landings.getPersons evt.Person.EntryFloor
             landings.setPersons evt.Person.EntryFloor (evt.Person :: prevList)
             ElevatorModule.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
 
-        | ExitCabin -> transportedPersons.Add(evt.Person)
+        | ExitCabin ->
+            transportedPersons.Add(evt.Person)
+            LoggingModule.logPersonExit clk evt.Person
+
 
     let printFinalStats () =
         printfn "Final stats"
 
         printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
         printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
+
         for p in transportedPersons.OrderBy(fun p -> p.ArrivalTime) do
             let (PersonId pid) = p.Id
             let (Floor entryFloor) = p.EntryFloor
@@ -590,18 +717,26 @@ module PersonModule =
             let (Clock entryTime) = p.EntryTime.Value
             let (Clock exitTime) = p.ExitTime.Value
 
-            let waitForElevator = entryTime-arrivalTime
-            let totalTransportTime = exitTime-arrivalTime
+            let waitForElevator = entryTime - arrivalTime
+            let totalTransportTime = exitTime - arrivalTime
 
-            printfn $"  {pid,4}  {entryFloor,7} {exitFloor,7}  {arrivalTime,8} {entryTime,8} {exitTime,8}  {waitForElevator,8} {totalTransportTime,8}"
+            printfn
+                $"  {pid, 4}  {entryFloor, 7} {exitFloor, 7}  {arrivalTime, 8} {entryTime, 8} {exitTime, 8}  {waitForElevator, 8} {totalTransportTime, 8}"
 
         let ls = List.ofSeq transportedPersons
-        let avgWaitForElevator = double(ls |> List.sumBy (fun p -> p.waitForElevator())) / double(List.length ls)
-        let avgTotalTransport = double(ls |> List.sumBy (fun p -> p.totalTransportation())) / double(List.length ls)
+
+        let avgWaitForElevator =
+            double (ls |> List.sumBy (fun p -> p.waitForElevator ()))
+            / double (List.length ls)
+
+        let avgTotalTransport =
+            double (ls |> List.sumBy (fun p -> p.totalTransportation ()))
+            / double (List.length ls)
+
         printfn ""
         printfn "Average wait for elevator: %4.1f" avgWaitForElevator
         printfn "Average total transport:   %4.1f" avgTotalTransport
-        
+
 
 // Runs the simulation
 // In charge or master clock
