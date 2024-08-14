@@ -20,11 +20,26 @@ let levels = 6 // 0=Ground, and levels 1..5
 let accelerationDuration = 2 // and deceleration duration
 let oneLevelFullSpeed = 4
 let fullSpeedBeforeDecisionDuration = 1 // and after decision before deceleration
-let openingDoorsDuration = 2 // and closing doors duration
+let openingDoorsDuration = 3 // and closing doors duration; Include delay between motor off/opening and closed/motor on
 let moveInDuration = 2 // and move out duration
 
 
-type Floor = int
+type DirectionState =
+    | NoDirection
+    | Up
+    | Down
+
+type Floor = 
+    Floor of int
+
+    with
+        member this.nextFloor direction =
+            let (Floor sf) = this
+            match direction with
+            | Up -> if sf + 1 < levels then Some(Floor(sf + 1)) else None
+            | Down -> if sf > 0 then Some(Floor(sf - 1)) else None
+            | NoDirection -> None
+
 type Clock = int
 
 type Person =
@@ -33,8 +48,6 @@ type Person =
       EntryTime: Clock
       ExitFloor: Floor
       ExitTime: Clock }
-
-type Landing = { Persons: Person list }
 
 type MotorState =
     | Off
@@ -52,35 +65,55 @@ type CabinState =
     | Idle
     | Busy
 
-type DirectionState =
-    | NoDirection
-    | Up
-    | Down
-
 type Cabin =
     { Floor: Floor
       Motor: MotorState
       Door: DoorState
       Direction: DirectionState
       Cabin: CabinState
-      StopRequested: bool[]
+      _StopRequested: bool array
       //Capacity: int
       Persons: Person list }
 
+    member this.getStopRequested floor =
+        let (Floor f) = floor
+        this._StopRequested[f]
+
+    member this.setStopRequested floor =
+        let (Floor f) = floor
+        this._StopRequested[f] <- true
+
+    member this.clearStopRequested floor =
+        let (Floor f) = floor
+        this._StopRequested[f] <- false
+
 
 let cabinInitialState =
-    { Floor = 0
+    { Floor = Floor 0
       Motor = Off
       Direction = NoDirection
       Door = Closed
       Cabin = Idle
-      StopRequested = Array.create levels false
+      _StopRequested = Array.create levels false
       //Capacity = 10
       Persons = [] }
 
-let landings = Array.create levels { Landing.Persons = [] }
 let cabins = Array.create numberOfCabins cabinInitialState
 
+
+type Landings = 
+    { _Persons: Person list array }
+
+    with
+        member this.getPersons (floor:Floor) =
+            let (Floor fl) = floor
+            this._Persons[fl]
+
+        member this.setPersons (floor:Floor) value =
+            let (Floor fl) = floor
+            this._Persons[fl] <- value
+            
+let landings = {Landings._Persons = [| for i in 0..levels-1 -> [] |]}
 
 type PersonEventDetail =
     | Arrival
@@ -166,12 +199,13 @@ module ElevatorModule =
             assert (cabin.Direction <> NoDirection)
             assert (cabin.Cabin = Busy)
 
-            cabins[0] <-
-                { cabin with
-                    Floor = cabin.Floor + if cabin.Direction = Up then 1 else -1 }
+            let nf = cabin.Floor.nextFloor cabin.Direction
+            assert (nf.IsSome)
+            cabins[0] <- { cabin with Floor = nf.Value }
+
             // Decide if we stop at next floor or not
             let evt =
-                if cabin.StopRequested[cabins[0].Floor] then
+                if cabin.getStopRequested cabins[0].Floor then
 
                     { ElevatorEvent.Clock = clk + fullSpeedBeforeDecisionDuration
                       Event = EndMovingFullSpeed }
@@ -210,17 +244,27 @@ module ElevatorModule =
             elevatorQueue.Enqueue(evt, evt.Clock)
 
             // Clear the stop requested for current floor
-            cabin.StopRequested[cabin.Floor] <- false
+            cabin.clearStopRequested cabin.Floor
 
-            // Decide if we still continue with the same direction or there's no direction anymore
-            let rec checkRequests floor direction =
-                let nextFloor = floor + (if direction = Up then 1 else -1)
+            // Decide if we still continue with the same direction (returns true) or not (returns false)
+            let rec checkRequestsOneDirection (floor:Floor) direction =
+                let nf = floor.nextFloor direction
+                match nf with
+                | None -> false
+                | Some fl ->
+                    if cabin.getStopRequested fl
+                    then true
+                    else checkRequestsOneDirection fl direction
 
-                if nextFloor < 0 || nextFloor >= levels then NoDirection
-                elif cabin.StopRequested[nextFloor] then direction
-                else checkRequests nextFloor direction
-
-            //$$$ ToDo: We can actually change direction at this point
+            let rec checkRequests (floor:Floor) direction =
+                assert(direction<>NoDirection)
+                if checkRequestsOneDirection floor direction 
+                then direction
+                else
+                    let oppositeDirection = if direction=Up then Down else Up
+                    if checkRequestsOneDirection floor oppositeDirection 
+                    then oppositeDirection
+                    else NoDirection
 
             let newDirection = checkRequests cabin.Floor cabin.Direction
 
@@ -267,11 +311,11 @@ module ElevatorModule =
                 // First version, person moves in the cabin, regardless of cabin direction and ignoring capacity
                 let cabin = cabins[0]
 
-                match landings[cabin.Floor].Persons with
+                match landings.getPersons cabin.Floor with
                 | [] -> false
                 | p :: remainingPersons ->
                     let updatedPerson = { p with EntryTime = clk }
-                    cabin.StopRequested[p.ExitFloor] <- true
+                    cabin.setStopRequested p.ExitFloor
 
                     let newDirection =
                         if cabin.Direction = NoDirection then
@@ -284,9 +328,7 @@ module ElevatorModule =
                             Persons = updatedPerson :: cabin.Persons
                             Direction = newDirection }
 
-                    landings[cabin.Floor] <-
-                        { landings[cabin.Floor] with
-                            Persons = remainingPersons }
+                    landings.setPersons cabin.Floor remainingPersons
 
                     // Elevator event to continue with next person moving out or in the elevator at current floor
                     let evt =
@@ -324,8 +366,9 @@ module ElevatorModule =
 
             match cabin.Direction with
             | NoDirection ->
-                assert (Array.forall (fun b -> b = false) cabin.StopRequested) // Ok, I know that b=false is "not b"
-                assert (Array.forall (fun (l: Landing) -> l.Persons.IsEmpty) landings)
+                for l in 0..levels-1 do
+                    assert(not (cabin.getStopRequested (Floor l)))
+                    assert((landings.getPersons (Floor l)).IsEmpty)
                 assert (cabins[0].Persons.IsEmpty)
                 // Ok, we checked to be sure that nobody is waiting, elevator goes into idle state
                 cabins[0] <- { cabins[0] with Cabin = Idle }
@@ -340,8 +383,8 @@ module ElevatorModule =
                 elevatorQueue.Enqueue(evt, evt.Clock)
 
 
-    let callElevator clk entry exit =
-        printfn "\nCalling elevator from level %d to go to level %d" entry exit
+    let callElevator clk (entry:Floor) (exit:Floor) =
+        printfn "\nCalling elevator from level %A to go to level %A" entry exit
         assert (exit <> entry)
         let cabin = cabins[0]
 
@@ -367,7 +410,7 @@ module ElevatorModule =
 
             // Otherwise we start accelerating
             else
-                cabin.StopRequested[exit] <- true
+                cabin.setStopRequested exit
 
                 cabins[0] <-
                     { cabin with
@@ -390,9 +433,9 @@ module PersonModule =
     let getRandomPerson () =
         let entry, exit =
             if rndPersons.Next(2) = 0 then
-                0, rndPersons.Next(1, levels)
+                Floor 0, Floor (rndPersons.Next(1, levels))
             else
-                rndPersons.Next(1, levels), 0
+                Floor (rndPersons.Next(1, levels)), Floor 0
 
         let arrival = rndPersons.Next(arrivalLength)
 
@@ -426,8 +469,8 @@ module PersonModule =
 
         match evt.Event with
         | Arrival ->
-            let prevList = landings[evt.Person.EntryFloor].Persons
-            landings[evt.Person.EntryFloor] <- { Persons = evt.Person :: prevList }
+            let prevList = landings.getPersons evt.Person.EntryFloor
+            landings.setPersons evt.Person.EntryFloor (evt.Person :: prevList)
             ElevatorModule.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
 
         | ExitCabin -> transportedPersons.Add(evt.Person)
