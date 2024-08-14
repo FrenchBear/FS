@@ -3,8 +3,7 @@
 //
 // 2024-08-13   PV      First version, only 1 cabin
 
-// ToDo: Number person Id by arrival time
-// ToDo: Final elevator stats: travel distance/time/accelerations
+// ToDo: Final elevator stats: travel distance/time/accelerations, max persons transported, ...
 // ToDo: Manage elevator capacity
 // ToDo: On landings, last arrived person is 1st on the list, so 1st to enter in the evelator, that should not be the case (pb is that 1st person entering may change cabin direction from NoDirection to what needs the 1st person)
 // ToDo: Manage more than 1 elevator
@@ -646,27 +645,32 @@ module ElevatorModule =
 
         // Cabin is not idle, but it may be closing doors with no direction. Update direction in this case
         elif cabin.Direction = NoDirection then
-            if entry = cabin.Floor then
-                // Cabin is closing doors, so we cancel current event, and register a doors opening event
-                // with correct amount of time
-                // Note that this kind of manipulation should be handled by scheduler, but because of module
-                // order and dependencies order, it's directly managed here.
-                assert (cabin.Door = Closing)
-                let nextElevatorEvent = getNextElevatorEvent () // Removes the event from queue
-                assert (nextElevatorEvent.Event = EndClosingDoors)
-                let remainigTime = nextElevatorEvent.Clock.minus clk
+            if entry = cabin.Floor 
+            then 
+                if cabin.Door = Closing then
+                    // Cabin is closing doors, so we cancel current event, and register a doors opening event
+                    // with correct amount of time
+                    // Note that this kind of manipulation should be handled by scheduler, but because of module
+                    // order and dependencies order, it's directly managed here.
+                    let nextElevatorEvent = getNextElevatorEvent () // Removes the event from queue
+                    assert (nextElevatorEvent.Event = EndClosingDoors)
+                    let remainigTime = nextElevatorEvent.Clock.minus clk
 
-                cabins[0] <- { cabin with Door = Opening } // Door is now opening
+                    cabins[0] <- { cabin with Door = Opening } // Door is now opening
 
-                // And we register a new EndOpeningDoors event for the cabin
-                let evt =
-                    { ElevatorEvent.Clock = clk.addOffset (openingDoorsDuration - remainigTime)
-                      Event = EndOpeningDoors }
+                    // And we register a new EndOpeningDoors event for the cabin
+                    let evt =
+                        { ElevatorEvent.Clock = clk.addOffset (openingDoorsDuration - remainigTime)
+                          Event = EndOpeningDoors }
 
-                elevatorQueue.Enqueue(evt, evt.Clock)
+                    elevatorQueue.Enqueue(evt, evt.Clock)
+
+                else
+                    assert(cabin.Door=Opening)
+                    ()  // Just wait for the door to open
 
             else
-                // Cabin must move up or down, so we set direction and wiat for the doors to close,
+                // Cabin must move up or down, so we set direction and wait for the doors to close,
                 // once the doors are closed, motor will turn on and start accelerating
                 cabin.setStopRequested entry
 
@@ -682,7 +686,7 @@ module PersonModule =
 
     let rndPersons = new System.Random(randomSeed)
 
-    let getRandomPerson id =
+    let getRandomPerson () =
         let entry, exit =
             if rndPersons.Next(2) = 0 then
                 Floor 0, Floor(rndPersons.Next(1, levels))
@@ -691,14 +695,20 @@ module PersonModule =
 
         let arrival = Clock(rndPersons.Next(arrivalLength))
 
-        { Id = id
+        { Id = PersonId 0
           EntryFloor = entry
           ExitFloor = exit
           ArrivalTime = arrival
           EntryTime = None
           ExitTime = None }
 
-    let personArray = [| for i in 1..personsToCarry -> getRandomPerson (PersonId i) |]
+    let tempPersonArray = [| for _ in 0..personsToCarry-1 -> getRandomPerson () |]
+    Array.sortInPlaceBy (fun p -> p.ArrivalTime) tempPersonArray
+    let personArray = [| for i in 0..personsToCarry-1 -> {tempPersonArray[i] with Id=PersonId i} |]
+
+    for p in personArray do
+        printfn "%0A" p
+    printfn ""
 
     for p in personArray do
         let evt =
