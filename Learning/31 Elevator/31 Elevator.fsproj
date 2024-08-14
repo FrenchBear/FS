@@ -10,6 +10,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Compile Include="Types.fs" />
+		<Compile Include="Logging.fs" />
+		<Compile Include="Elevator.fs" />
+		<Compile Include="Person.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>
 
