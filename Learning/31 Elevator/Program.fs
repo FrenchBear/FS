@@ -8,6 +8,9 @@
 // ToDo: Manage more than 1 elevator
 
 
+let traceEvents = false
+
+
 // Extent of simulation
 let personsToCarry = 1
 let arrivalLength = 60
@@ -23,29 +26,34 @@ let openingDoorsDuration = 3 // and closing doors duration; Include delay betwee
 let moveInDuration = 2 // and move out duration
 
 
-type DirectionState =
+type Direction =
     | NoDirection
     | Up
     | Down
 
-type Floor = 
-    Floor of int
+// Use typed Floor rather than int alias for better type checking
+type Floor =
+    | Floor of int
 
-    with
-        member this.nextFloor direction =
-            let (Floor sf) = this
-            match direction with
-            | Up -> if sf + 1 < levels then Some(Floor(sf + 1)) else None
-            | Down -> if sf > 0 then Some(Floor(sf - 1)) else None
-            | NoDirection -> None
+    member this.nextFloor direction =
+        let (Floor sf) = this
 
-type Clock = 
-    Clock of int
+        match direction with
+        | Up -> if sf + 1 < levels then Some(Floor(sf + 1)) else None
+        | Down -> if sf > 0 then Some(Floor(sf - 1)) else None
+        | NoDirection -> None
 
-    with 
-        member this.addOffset offset =
-            let (Clock cl) = this
-            Clock (cl+offset)
+// Use typed Clock rather than int alias for better type checking
+type Clock =
+    | Clock of int
+
+    member this.addOffset offset =
+        let (Clock cl) = this
+        Clock(cl + offset)
+
+
+// ----------------------------------------
+// Person
 
 type Person =
     { EntryFloor: Floor
@@ -53,6 +61,9 @@ type Person =
       ExitFloor: Floor
       EntryTime: Clock option
       ExitTime: Clock option }
+
+// ----------------------------------------
+// Cabin
 
 type MotorState =
     | Off
@@ -74,7 +85,7 @@ type Cabin =
     { Floor: Floor
       Motor: MotorState
       Door: DoorState
-      Direction: DirectionState
+      Direction: Direction
       Cabin: CabinState
       _StopRequested: bool array
       //Capacity: int
@@ -106,19 +117,25 @@ let cabinInitialState =
 let cabins = Array.create numberOfCabins cabinInitialState
 
 
-type Landings = 
+// ----------------------------------------
+// Landings
+
+type Landings =
     { _Persons: Person list array }
 
-    with
-        member this.getPersons (floor:Floor) =
-            let (Floor fl) = floor
-            this._Persons[fl]
+    member this.getPersons(floor: Floor) =
+        let (Floor fl) = floor
+        this._Persons[fl]
 
-        member this.setPersons (floor:Floor) value =
-            let (Floor fl) = floor
-            this._Persons[fl] <- value
-            
-let landings = {Landings._Persons = [| for i in 0..levels-1 -> [] |]}
+    member this.setPersons (floor: Floor) value =
+        let (Floor fl) = floor
+        this._Persons[fl] <- value
+
+let landings = { Landings._Persons = [| for i in 0 .. levels - 1 -> [] |] }
+
+
+// ----------------------------------------
+// Events
 
 type PersonEventDetail =
     | Arrival
@@ -144,6 +161,7 @@ type ElevatorEvent =
       Event: ElevatorEventDetail }
 
 
+// ----------------------------------------
 // Priority queues
 let elevatorQueue =
     new System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>()
@@ -151,6 +169,9 @@ let elevatorQueue =
 let personEventQueue =
     new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
 
+
+// ----------------------------------------
+// Modules
 
 module ElevatorModule =
     let evt =
@@ -166,10 +187,11 @@ module ElevatorModule =
             let evt = elevatorQueue.Peek()
             Some evt.Clock
 
-    let processEvent (clk:Clock) =
+    let processEvent (clk: Clock) =
         let evt = elevatorQueue.Dequeue()
-        printfn "\nEvevator.processEvent evt=%0A" evt
-        printfn "  cabin: %0A" cabins[0]
+        if traceEvents then
+            printfn "\nEvevator.processEvent evt=%0A" evt
+            printfn "  cabin: %0A" cabins[0]
 
         assert (clk = evt.Clock)
 
@@ -252,24 +274,29 @@ module ElevatorModule =
             cabin.clearStopRequested cabin.Floor
 
             // Decide if we still continue with the same direction (returns true) or not (returns false)
-            let rec checkRequestsOneDirection (floor:Floor) direction =
+            let rec checkRequestsOneDirection (floor: Floor) direction =
                 let nf = floor.nextFloor direction
+
                 match nf with
                 | None -> false
                 | Some fl ->
-                    if cabin.getStopRequested fl
-                    then true
-                    else checkRequestsOneDirection fl direction
+                    if cabin.getStopRequested fl then
+                        true
+                    else
+                        checkRequestsOneDirection fl direction
 
-            let rec checkRequests (floor:Floor) direction =
-                assert(direction<>NoDirection)
-                if checkRequestsOneDirection floor direction 
-                then direction
+            let rec checkRequests (floor: Floor) direction =
+                assert (direction <> NoDirection)
+
+                if checkRequestsOneDirection floor direction then
+                    direction
                 else
-                    let oppositeDirection = if direction=Up then Down else Up
-                    if checkRequestsOneDirection floor oppositeDirection 
-                    then oppositeDirection
-                    else NoDirection
+                    let oppositeDirection = if direction = Up then Down else Up
+
+                    if checkRequestsOneDirection floor oppositeDirection then
+                        oppositeDirection
+                    else
+                        NoDirection
 
             let newDirection = checkRequests cabin.Floor cabin.Direction
 
@@ -304,7 +331,7 @@ module ElevatorModule =
                         { PersonEvent.Clock = clk.addOffset moveInDuration
                           Person =
                             { p with
-                                ExitTime = Some (clk.addOffset moveInDuration) }
+                                ExitTime = Some(clk.addOffset moveInDuration) }
                           Event = ExitCabin }
 
                     personEventQueue.Enqueue(evt2, evt2.Clock)
@@ -371,9 +398,10 @@ module ElevatorModule =
 
             match cabin.Direction with
             | NoDirection ->
-                for l in 0..levels-1 do
-                    assert(not (cabin.getStopRequested (Floor l)))
-                    assert((landings.getPersons (Floor l)).IsEmpty)
+                for l in 0 .. levels - 1 do
+                    assert (not (cabin.getStopRequested (Floor l)))
+                    assert ((landings.getPersons (Floor l)).IsEmpty)
+
                 assert (cabins[0].Persons.IsEmpty)
                 // Ok, we checked to be sure that nobody is waiting, elevator goes into idle state
                 cabins[0] <- { cabins[0] with Cabin = Idle }
@@ -388,9 +416,10 @@ module ElevatorModule =
                 elevatorQueue.Enqueue(evt, evt.Clock)
 
 
-    let callElevator (clk:Clock) (entry:Floor) (exit:Floor) =
-        printfn "\nCalling elevator from level %A to go to level %A" entry exit
+    let callElevator (clk: Clock) (entry: Floor) (exit: Floor) =
         assert (exit <> entry)
+        if traceEvents then
+            printfn "\nCalling elevator from level %A to go to level %A" entry exit
         let cabin = cabins[0]
 
         // Actually only do something if elevator is idle; If elevator is busy, then at some point
@@ -438,18 +467,17 @@ module PersonModule =
     let getRandomPerson () =
         let entry, exit =
             if rndPersons.Next(2) = 0 then
-                Floor 0, Floor (rndPersons.Next(1, levels))
+                Floor 0, Floor(rndPersons.Next(1, levels))
             else
-                Floor (rndPersons.Next(1, levels)), Floor 0
+                Floor(rndPersons.Next(1, levels)), Floor 0
 
-        let arrival = Clock (rndPersons.Next(arrivalLength))
+        let arrival = Clock(rndPersons.Next(arrivalLength))
 
         { EntryFloor = entry
           ExitFloor = exit
           ArrivalTime = arrival
           EntryTime = None
-          ExitTime = None
-        }
+          ExitTime = None }
 
     let personArray = [| for _ in 1..personsToCarry -> getRandomPerson () |]
 
@@ -470,7 +498,8 @@ module PersonModule =
 
     let processEvent clk =
         let evt = personEventQueue.Dequeue()
-        printfn "\nPerson.processEvent evt=%0A" evt
+        if traceEvents then
+            printfn "\nPerson.processEvent evt=%0A" evt
         assert (clk = evt.Clock)
 
         match evt.Event with
@@ -493,7 +522,7 @@ module PersonModule =
 // Find next event in line, process it, and iterates until there are no more events to process
 module SchedulerModule =
 
-    let rec processNextEvent (clk:Clock) =
+    let rec processNextEvent (clk: Clock) =
 
         let comingEvents =
             [ (PersonModule.getNextPersonEventClock (), PersonModule.processEvent)
