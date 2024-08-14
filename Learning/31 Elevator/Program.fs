@@ -3,10 +3,9 @@
 //
 // 2024-08-13   PV      First version, only 1 cabin
 
-// ToDo: manage direction change when service is not requested anymore in current direction
-// ToDo: Use more realistic durations based on actual building elevator (18s from 0th to 1st floor is a bit too much)
 // ToDo: Build a clean log of events and state changes
 // ToDo: Manage elevator capacity
+// ToDo: Manage more than 1 elevator
 
 
 // Extent of simulation
@@ -40,14 +39,20 @@ type Floor =
             | Down -> if sf > 0 then Some(Floor(sf - 1)) else None
             | NoDirection -> None
 
-type Clock = int
+type Clock = 
+    Clock of int
+
+    with 
+        member this.addOffset offset =
+            let (Clock cl) = this
+            Clock (cl+offset)
 
 type Person =
     { EntryFloor: Floor
       ArrivalTime: Clock
-      EntryTime: Clock
       ExitFloor: Floor
-      ExitTime: Clock }
+      EntryTime: Clock option
+      ExitTime: Clock option }
 
 type MotorState =
     | Off
@@ -120,7 +125,7 @@ type PersonEventDetail =
     | ExitCabin
 
 type PersonEvent =
-    { Clock: int
+    { Clock: Clock
       Event: PersonEventDetail
       Person: Person }
 
@@ -135,7 +140,7 @@ type ElevatorEventDetail =
     | EndClosingDoors
 
 type ElevatorEvent =
-    { Clock: int
+    { Clock: Clock
       Event: ElevatorEventDetail }
 
 
@@ -149,7 +154,7 @@ let personEventQueue =
 
 module ElevatorModule =
     let evt =
-        { ElevatorEvent.Clock = 0
+        { ElevatorEvent.Clock = Clock 0
           Event = ElevatorOn }
 
     elevatorQueue.Enqueue(evt, evt.Clock)
@@ -161,7 +166,7 @@ module ElevatorModule =
             let evt = elevatorQueue.Peek()
             Some evt.Clock
 
-    let processEvent clk =
+    let processEvent (clk:Clock) =
         let evt = elevatorQueue.Dequeue()
         printfn "\nEvevator.processEvent evt=%0A" evt
         printfn "  cabin: %0A" cabins[0]
@@ -185,7 +190,7 @@ module ElevatorModule =
             assert (cabin.Cabin = Busy)
 
             let evt =
-                { ElevatorEvent.Clock = clk + fullSpeedBeforeDecisionDuration
+                { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration
                   Event = Decision }
 
             elevatorQueue.Enqueue(evt, evt.Clock)
@@ -207,10 +212,10 @@ module ElevatorModule =
             let evt =
                 if cabin.getStopRequested cabins[0].Floor then
 
-                    { ElevatorEvent.Clock = clk + fullSpeedBeforeDecisionDuration
+                    { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration
                       Event = EndMovingFullSpeed }
                 else
-                    { ElevatorEvent.Clock = clk + oneLevelFullSpeed
+                    { ElevatorEvent.Clock = clk.addOffset oneLevelFullSpeed
                       Event = Decision }
 
             elevatorQueue.Enqueue(evt, evt.Clock)
@@ -223,7 +228,7 @@ module ElevatorModule =
             assert (cabin.Cabin = Busy)
 
             let evt =
-                { ElevatorEvent.Clock = clk + accelerationDuration
+                { ElevatorEvent.Clock = clk.addOffset accelerationDuration
                   Event = EndDeceleration }
 
             elevatorQueue.Enqueue(evt, evt.Clock)
@@ -238,7 +243,7 @@ module ElevatorModule =
 
             // Ok, we arrive at a floor with stop requested
             let evt =
-                { ElevatorEvent.Clock = clk + openingDoorsDuration
+                { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration
                   Event = EndOpeningDoors }
 
             elevatorQueue.Enqueue(evt, evt.Clock)
@@ -289,17 +294,17 @@ module ElevatorModule =
 
                     // Elevator event to continue with next person moving out or in the elevator at current floor
                     let evt =
-                        { ElevatorEvent.Clock = clk + moveInDuration
+                        { ElevatorEvent.Clock = clk.addOffset moveInDuration
                           Event = EndOpeningDoors }
 
                     elevatorQueue.Enqueue(evt, evt.Clock)
 
                     // Person event to record cabin exit for final stats
                     let evt2 =
-                        { PersonEvent.Clock = clk + moveInDuration
+                        { PersonEvent.Clock = clk.addOffset moveInDuration
                           Person =
                             { p with
-                                ExitTime = clk + moveInDuration }
+                                ExitTime = Some (clk.addOffset moveInDuration) }
                           Event = ExitCabin }
 
                     personEventQueue.Enqueue(evt2, evt2.Clock)
@@ -314,7 +319,7 @@ module ElevatorModule =
                 match landings.getPersons cabin.Floor with
                 | [] -> false
                 | p :: remainingPersons ->
-                    let updatedPerson = { p with EntryTime = clk }
+                    let updatedPerson = { p with EntryTime = Some clk }
                     cabin.setStopRequested p.ExitFloor
 
                     let newDirection =
@@ -332,7 +337,7 @@ module ElevatorModule =
 
                     // Elevator event to continue with next person moving out or in the elevator at current floor
                     let evt =
-                        { ElevatorEvent.Clock = clk + moveInDuration
+                        { ElevatorEvent.Clock = clk.addOffset moveInDuration
                           Event = EndOpeningDoors }
 
                     elevatorQueue.Enqueue(evt, evt.Clock)
@@ -352,7 +357,7 @@ module ElevatorModule =
                     cabins[0] <- { cabin with Door = Closing }
 
                     let evt =
-                        { ElevatorEvent.Clock = clk + 3
+                        { ElevatorEvent.Clock = clk.addOffset 3
                           Event = EndClosingDoors }
 
                     elevatorQueue.Enqueue(evt, evt.Clock)
@@ -377,13 +382,13 @@ module ElevatorModule =
                 cabins[0] <- { cabins[0] with Motor = Accelerating }
 
                 let evt =
-                    { ElevatorEvent.Clock = clk + openingDoorsDuration
+                    { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration
                       Event = EndAcceleration }
 
                 elevatorQueue.Enqueue(evt, evt.Clock)
 
 
-    let callElevator clk (entry:Floor) (exit:Floor) =
+    let callElevator (clk:Clock) (entry:Floor) (exit:Floor) =
         printfn "\nCalling elevator from level %A to go to level %A" entry exit
         assert (exit <> entry)
         let cabin = cabins[0]
@@ -403,7 +408,7 @@ module ElevatorModule =
                         Door = Opening }
 
                 let evt =
-                    { ElevatorEvent.Clock = clk + openingDoorsDuration
+                    { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration
                       Event = EndOpeningDoors }
 
                 elevatorQueue.Enqueue(evt, evt.Clock)
@@ -419,7 +424,7 @@ module ElevatorModule =
                         Direction = if (entry > exit) then Up else Down }
 
                 let evt =
-                    { ElevatorEvent.Clock = clk + accelerationDuration
+                    { ElevatorEvent.Clock = clk.addOffset accelerationDuration
                       Event = EndAcceleration }
 
                 elevatorQueue.Enqueue(evt, evt.Clock)
@@ -437,13 +442,14 @@ module PersonModule =
             else
                 Floor (rndPersons.Next(1, levels)), Floor 0
 
-        let arrival = rndPersons.Next(arrivalLength)
+        let arrival = Clock (rndPersons.Next(arrivalLength))
 
         { EntryFloor = entry
           ExitFloor = exit
           ArrivalTime = arrival
-          EntryTime = 0
-          ExitTime = 0 }
+          EntryTime = None
+          ExitTime = None
+        }
 
     let personArray = [| for _ in 1..personsToCarry -> getRandomPerson () |]
 
@@ -487,7 +493,7 @@ module PersonModule =
 // Find next event in line, process it, and iterates until there are no more events to process
 module SchedulerModule =
 
-    let rec processNextEvent clk =
+    let rec processNextEvent (clk:Clock) =
 
         let comingEvents =
             [ (PersonModule.getNextPersonEventClock (), PersonModule.processEvent)
@@ -495,7 +501,7 @@ module SchedulerModule =
             |> List.filter (fun (optClk, _) -> optClk.IsSome)
 
         if comingEvents.IsEmpty then
-            printfn "\nFin de la simulation clk=%d\n" clk
+            printfn "\nFin de la simulation clk=%A\n" clk
             PersonModule.printFinalStats ()
         else
             let minClock = (fst (List.minBy (fun (optClk, _) -> optClk) comingEvents)).Value
@@ -506,4 +512,4 @@ module SchedulerModule =
 
             processNextEvent minClock
 
-    processNextEvent 0
+    processNextEvent (Clock 0)
