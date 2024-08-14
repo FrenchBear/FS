@@ -17,11 +17,11 @@ let arrivalLength = 60
 let numberOfCabins = 1
 let levels = 6 // 0=Ground, and levels 1..5
 
-let accelerationDuration = 2            // and deceleration duration
+let accelerationDuration = 2 // and deceleration duration
 let oneLevelFullSpeed = 4
 let fullSpeedBeforeDecisionDuration = 1 // and after decision before deceleration
-let openingDoorsDuration = 2            // and closing doors duration
-let moveInDuration = 2                  // and move out duration
+let openingDoorsDuration = 2 // and closing doors duration
+let moveInDuration = 2 // and move out duration
 
 
 type Floor = int
@@ -244,7 +244,9 @@ module ElevatorModule =
                     elevatorQueue.Enqueue(evt, evt.Clock)
 
                     // Keep info on this person for final statistics
-                    let updatedPerson = { p with ExitTime = clk + moveInDuration } // Add 3 seconds to move out elevator
+                    let updatedPerson =
+                        { p with
+                            ExitTime = clk + moveInDuration } // Add 3 seconds to move out elevator
 
                     // ToDo: Maybe a Exit person event would be better, so this could be processed inside Persons module
                     // rather than in Elevator module...
@@ -369,6 +371,7 @@ module ElevatorModule =
                 elevatorQueue.Enqueue(evt, evt.Clock)
 
     let printFinalStats () =
+        printfn "Final stats"
         for p in transportedPersons do
             printfn "  %0A" p
 
@@ -391,15 +394,19 @@ module PersonModule =
           EntryTime = 0
           ExitTime = 0 }
 
-    let personArray = [| for _ in 1..personsToCarry -> getRandomPerson() |]
-    let personEventQueue = new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
+    let personArray = [| for _ in 1..personsToCarry -> getRandomPerson () |]
+
+    let personEventQueue =
+        new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
+
     for p in personArray do
         let evt =
             { PersonEvent.Clock = p.ArrivalTime
               Event = Arrival p }
+
         personEventQueue.Enqueue(evt, evt.Clock)
 
-    let peekNextPersonEvent () =
+    let getNextPersonEventClock () =
         if personEventQueue.Count = 0 then
             None
         else
@@ -424,41 +431,22 @@ module PersonModule =
 module SchedulerModule =
 
     let rec processNextEvent clk =
-        let nextPersonEventClock = PersonModule.peekNextPersonEvent ()
-        let nextElevatorEventClock = ElevatorModule.getNextElevatorEventClock ()
-        //printfn "Scheduler.processNextEvent clk=%d pe=%0A ee=%0A" clk nextPersonEventClock nextElevatorEventClock
 
-        let nextClock =
-            match nextPersonEventClock, nextElevatorEventClock with
-            | None, None -> -1
-            | None, Some elevatorNextClock ->
-                assert (elevatorNextClock >= clk)
-                ElevatorModule.processEvent elevatorNextClock
-                elevatorNextClock
-            | Some personNextClock, None ->
-                assert (personNextClock >= clk)
-                PersonModule.processEvent personNextClock
-                personNextClock
-            | Some personNextClock, Some elevatorNextClock when personNextClock > elevatorNextClock ->
-                assert (elevatorNextClock >= clk)
-                ElevatorModule.processEvent elevatorNextClock
-                elevatorNextClock
-            | Some personNextClock, Some elevatorNextClock when personNextClock < elevatorNextClock ->
-                assert (personNextClock >= clk)
-                PersonModule.processEvent personNextClock
-                personNextClock
-            | Some personNextClock, Some elevatorNextClock ->
-                assert (personNextClock = elevatorNextClock)
-                assert (personNextClock >= clk)
-                PersonModule.processEvent personNextClock
-                ElevatorModule.processEvent elevatorNextClock
-                personNextClock
+        let comingEvents =
+            [ (PersonModule.getNextPersonEventClock (), PersonModule.processEvent)
+              (ElevatorModule.getNextElevatorEventClock (), ElevatorModule.processEvent) ]
+            |> List.filter (fun (optClk, _) -> optClk.IsSome)
 
-        match nextClock with
-        | -1 ->
+        if comingEvents.IsEmpty
+        then
             printfn "\nFin de la simulation clk=%d\n" clk
             ElevatorModule.printFinalStats ()
+        else
+            let minClock = (fst (List.minBy (fun (optClk,_)->optClk) comingEvents)).Value
+            let nextEvents = comingEvents |> List.filter (fun (opt, _) -> opt = Some(minClock))
+            for (_, processor) in nextEvents do
+                processor minClock
 
-        | _ -> processNextEvent nextClock
+            processNextEvent minClock
 
     processNextEvent 0
