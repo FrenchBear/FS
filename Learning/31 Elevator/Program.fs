@@ -82,10 +82,14 @@ let landings = Array.create levels { Landing.Persons = [] }
 let cabins = Array.create numberOfCabins cabinInitialState
 
 
-type PersonEventDetail = Arrival of Person
+type PersonEventDetail =
+    | Arrival
+    | ExitCabin
 
 type PersonEvent =
-    { Clock: int; Event: PersonEventDetail }
+    { Clock: int
+      Event: PersonEventDetail
+      Person: Person }
 
 
 type ElevatorEventDetail =
@@ -102,13 +106,15 @@ type ElevatorEvent =
       Event: ElevatorEventDetail }
 
 
+// Priority queues
+let elevatorQueue =
+    new System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>()
+
+let personEventQueue =
+    new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
+
 
 module ElevatorModule =
-    let elevatorQueue =
-        new System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>()
-
-    let transportedPersons = new System.Collections.Generic.List<Person>()
-
     let evt =
         { ElevatorEvent.Clock = 0
           Event = ElevatorOn }
@@ -237,22 +243,24 @@ module ElevatorModule =
                     let newPersons = List.removeAt i cabin.Persons
                     cabins[0] <- { cabin with Persons = newPersons }
 
+                    // Elevator event to continue with next person moving out or in the elevator at current floor
                     let evt =
                         { ElevatorEvent.Clock = clk + moveInDuration
                           Event = EndOpeningDoors }
 
                     elevatorQueue.Enqueue(evt, evt.Clock)
 
-                    // Keep info on this person for final statistics
-                    let updatedPerson =
-                        { p with
-                            ExitTime = clk + moveInDuration } // Add 3 seconds to move out elevator
+                    // Person event to record cabin exit for final stats
+                    let evt2 =
+                        { PersonEvent.Clock = clk + moveInDuration
+                          Person =
+                            { p with
+                                ExitTime = clk + moveInDuration }
+                          Event = ExitCabin }
 
-                    // ToDo: Maybe a Exit person event would be better, so this could be processed inside Persons module
-                    // rather than in Elevator module...
-                    transportedPersons.Add(updatedPerson)
+                    personEventQueue.Enqueue(evt2, evt2.Clock)
 
-                    true
+                    true // Indicates that a person has moved out, so we shouldn't call allowMoveIn yet
 
             let allowMoveIn () =
                 // If there's still a person on the floor that want to enter, give it 3 seconds to move in
@@ -280,13 +288,15 @@ module ElevatorModule =
                         { landings[cabin.Floor] with
                             Persons = remainingPersons }
 
+                    // Elevator event to continue with next person moving out or in the elevator at current floor
                     let evt =
                         { ElevatorEvent.Clock = clk + moveInDuration
                           Event = EndOpeningDoors }
 
                     elevatorQueue.Enqueue(evt, evt.Clock)
 
-                    true
+                    true // Indicates that a person moved in, so we must chech again whether another person
+            // is candidate to move in before starting motor
 
             let cabin = cabins[0]
             assert (cabin.Motor = Off)
@@ -319,6 +329,7 @@ module ElevatorModule =
                 assert (cabins[0].Persons.IsEmpty)
                 // Ok, we checked to be sure that nobody is waiting, elevator goes into idle state
                 cabins[0] <- { cabins[0] with Cabin = Idle }
+
             | _ ->
                 cabins[0] <- { cabins[0] with Motor = Accelerating }
 
@@ -370,13 +381,10 @@ module ElevatorModule =
 
                 elevatorQueue.Enqueue(evt, evt.Clock)
 
-    let printFinalStats () =
-        printfn "Final stats"
-        for p in transportedPersons do
-            printfn "  %0A" p
-
 
 module PersonModule =
+    let transportedPersons = new System.Collections.Generic.List<Person>()
+
     let rndPersons = new System.Random(1)
 
     let getRandomPerson () =
@@ -396,13 +404,11 @@ module PersonModule =
 
     let personArray = [| for _ in 1..personsToCarry -> getRandomPerson () |]
 
-    let personEventQueue =
-        new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
-
     for p in personArray do
         let evt =
             { PersonEvent.Clock = p.ArrivalTime
-              Event = Arrival p }
+              Person = p
+              Event = Arrival }
 
         personEventQueue.Enqueue(evt, evt.Clock)
 
@@ -419,10 +425,18 @@ module PersonModule =
         assert (clk = evt.Clock)
 
         match evt.Event with
-        | Arrival p ->
-            let prevList = landings[p.EntryFloor].Persons
-            landings[p.EntryFloor] <- { Persons = p :: prevList }
-            ElevatorModule.callElevator clk p.EntryFloor p.ExitFloor
+        | Arrival ->
+            let prevList = landings[evt.Person.EntryFloor].Persons
+            landings[evt.Person.EntryFloor] <- { Persons = evt.Person :: prevList }
+            ElevatorModule.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
+
+        | ExitCabin -> transportedPersons.Add(evt.Person)
+
+    let printFinalStats () =
+        printfn "Final stats"
+
+        for p in transportedPersons do
+            printfn "  %0A" p
 
 
 // Runs the simulation
@@ -437,13 +451,13 @@ module SchedulerModule =
               (ElevatorModule.getNextElevatorEventClock (), ElevatorModule.processEvent) ]
             |> List.filter (fun (optClk, _) -> optClk.IsSome)
 
-        if comingEvents.IsEmpty
-        then
+        if comingEvents.IsEmpty then
             printfn "\nFin de la simulation clk=%d\n" clk
-            ElevatorModule.printFinalStats ()
+            PersonModule.printFinalStats ()
         else
-            let minClock = (fst (List.minBy (fun (optClk,_)->optClk) comingEvents)).Value
+            let minClock = (fst (List.minBy (fun (optClk, _) -> optClk) comingEvents)).Value
             let nextEvents = comingEvents |> List.filter (fun (opt, _) -> opt = Some(minClock))
+
             for (_, processor) in nextEvents do
                 processor minClock
 
