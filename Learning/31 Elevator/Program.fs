@@ -3,32 +3,15 @@
 //
 // 2024-08-13   PV      First version, only 1 cabin
 
+// ToDo: Number person Id by arrival time
+// ToDo: Final elevator stats: travel distance/time/accelerations
 // ToDo: Manage elevator capacity
+// ToDo: On landings, last arrived person is 1st on the list, so 1st to enter in the evelator, that should not be the case (pb is that 1st person entering may change cabin direction from NoDirection to what needs the 1st person)
 // ToDo: Manage more than 1 elevator
 
-//type Zap = {
-//    Id: int
-//    T: int array
-//}
-
-//let z = {Zap.Id=2; T=Array.create 3 0}
-//printfn "z = %0A" z
-////let z' = {z with Id=3; T=Array.copy z.T}
-//let z' = {z with Id=3}
-//printfn "z' = %0A" z' 
-
-//z'.T[0] <- 12
-//printfn "z' = %0A" z'
-//printfn "z = %0A" z
-
-//printfn ""
+open System.Linq
 
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
-//printfn "→↔↛↝↠↣↦↪↬↭↮↱↳↴↹⇄⇆⇉⇎⇏⇒⇔⇛⇝⇢⇥⇨⇰⇴⇶⇸⇹⇻⇼⇾⇿⍈⍼▻➔➙➛➜➝➞➟➠➡➢➣➤➥➦➧➨➩➪➫➬➭➮➯➱➲➳➵➸➺➻➼➽➾⟴⟶⟷⟹⟺⟼⟾⟿⤀⤁⤃⤄⤅⤇⤍⤏⤐⤑⤔⤕⤖⤗⤘⤚⤜⤞⤠⤳⤴⤵⤷⤸⤾⥂⥃⥄⥅⥇⥈⥰⥱⥲⥴⥵⥸⥹⦨⦪⦬⦮⦳⧴⬄⬌⬎⬏⭃⭄⭆⭇⭈⭌⭢⭤⭬⭲⭼⮀⮂⮆⮊⮌⮕⮙⮚⮞⮡⮣⮥⮧⮩⮫⮭⮯⮱⮳⮵⮷⯮📲🔀🔁🔂🔛🔜🗘🠂🠆🠊🠒🠖🠚🠞🠢🠦🠪🠮🠲🠶🠺🠾🡂🡆🡒🡘🡢🡪🡲🡺🢂🢒🢖🢚🢡🢣🢥🢦🢧🢩🢫🢱"
-//printfn ""
-
-
-open System.Linq
 
 let traceEvents = false
 let randomSeed = 1
@@ -164,7 +147,8 @@ type Cabin =
     // Need a deepCopy because of array, since an array is just a pointer to a mutable structure
     // On the other hand, Persons is an immutable list, so there's no problem with basic record copy
     member this.deepCopy() =
-        { this with _StopRequested = Array.copy this._StopRequested }
+        { this with
+            _StopRequested = Array.copy this._StopRequested }
 
 
 let cabinInitialState =
@@ -245,26 +229,26 @@ module LoggingModule =
         let lst = new System.Collections.Generic.List<string>()
 
         if before.Floor <> after.Floor then
-            lst.Add($"Floor {before.Floor} -> {after.Floor}")
+            lst.Add($"Floor {before.Floor}→{after.Floor}")
 
         if before.Motor <> after.Motor then
-            lst.Add($"Motor {before.Motor} -> {after.Motor}")
+            lst.Add($"Motor {before.Motor}→{after.Motor}")
 
         if before.Door <> after.Door then
-            lst.Add($"Door {before.Door} -> {after.Door}")
+            lst.Add($"Door {before.Door}→{after.Door}")
 
         if before.Direction <> after.Direction then
-            lst.Add($"Direction {before.Direction} -> {after.Direction}")
+            lst.Add($"Direction {before.Direction}→{after.Direction}")
 
         if before.Cabin <> after.Cabin then
-            lst.Add($"Cabin {before.Cabin} -> {after.Cabin}")
+            lst.Add($"Cabin {before.Cabin}→{after.Cabin}")
 
 
         let lstStopRequested = new System.Collections.Generic.List<string>()
 
         for i in 0 .. levels - 1 do
             if before._StopRequested[i] <> after._StopRequested[i] then
-                lstStopRequested.Add($"StopRequested[{i}]: {before._StopRequested[i]} -> {after._StopRequested[i]}")
+                lstStopRequested.Add($"StopRequested[{i}]: {before._StopRequested[i]}→{after._StopRequested[i]}")
 
         if not (lstStopRequested.Count = 0) then
             lst.Add(System.String.Join(", ", lstStopRequested))
@@ -273,21 +257,21 @@ module LoggingModule =
         let lstPersons = new System.Collections.Generic.List<string>()
 
         if List.length before.Persons <> List.length after.Persons then
-            lstPersons.Add($"Persons count {List.length before.Persons} -> {List.length after.Persons}")
+            lstPersons.Add($"Persons count {List.length before.Persons}→{List.length after.Persons}")
 
         for pb in before.Persons do
             let ixOpt = List.tryFindIndex (fun pa -> pa.Id = pb.Id) after.Persons
 
             if ixOpt.IsNone then
                 let (PersonId pid) = pb.Id
-                lstPersons.Add($"Person {pid} left")
+                lstPersons.Add($"Person {pid} out")
 
         for pa in after.Persons do
             let ixOpt = List.tryFindIndex (fun pb -> pb.Id = pa.Id) before.Persons
 
             if ixOpt.IsNone then
                 let (PersonId pid) = pa.Id
-                lstPersons.Add($"Person {pid} entered")
+                lstPersons.Add($"Person {pid} in")
 
         if not (lstPersons.Count = 0) then
             lst.Add(System.String.Join(", ", lstPersons))
@@ -299,7 +283,7 @@ module LoggingModule =
         let (PersonId person) = p.Id
         let (Floor entry) = p.EntryFloor
         let (Floor exit) = p.ExitFloor
-        logMessage clk $"Person {person}: Arrival on Floor {entry} to go to Floor {exit}"
+        logMessage clk $"Person {person} Arrival Floor {entry}→Floor {exit}"
 
     let logPersonExit clk p =
         let (PersonId pid) = p.Id
@@ -313,8 +297,8 @@ module LoggingModule =
 
         logMessage
             clk
-            $"Person {pid}: Exit on Floor {exit} at {exitClk}, Arrived on Floor {entry} at {arrivalClk}, Entered cabin at {entryClk} after waiting {waitingCabin}, Total time {totalTransportationTime}"
-
+            // $"Person {pid} Exit on Floor {exit} at {exitClk}, Arrived on Floor {entry} at {arrivalClk}, Entered cabin at {entryClk} after waiting {waitingCabin}, Total time {totalTransportationTime}"
+            $"Person {pid} Exit, Arrival Floor {entry}@{arrivalClk}, Waited {waitingCabin}, Entered@{entryClk}, Exit Floor {exit}@{exitClk}, Total {totalTransportationTime}"
 
 module ElevatorModule =
     // Initial event, just to check that initial state is Ok
@@ -332,6 +316,15 @@ module ElevatorModule =
             Some evt.Clock
 
     let getNextElevatorEvent () = elevatorQueue.Dequeue()
+
+    let rec isStopRequestedBeyondPosition (cabin:Cabin) floor direction =
+        if cabin.getStopRequested floor
+        then true
+        else
+            let nf = floor.nextFloor direction
+            match nf with
+            | None -> false
+            | Some f -> isStopRequestedBeyondPosition cabin f direction
 
     let processEvent (clk: Clock) =
         let evt = elevatorQueue.Dequeue()
@@ -381,8 +374,33 @@ module ElevatorModule =
 
             // Decide if we stop at next floor or not
             let evt =
-                if cabin.getStopRequested cabins[0].Floor then
 
+                // For landings, we stop only if there is at least one person going in the same direction as the cabin
+                let landingStopRequest =
+                    let ll = landings.getPersons cabins[0].Floor
+                    if ll.IsEmpty 
+                    then false
+                    else
+                        let shouldContinueBecauseStopRequested = isStopRequestedBeyondPosition cabins[0] cabins[0].Floor cabins[0].Direction                    
+                    
+                        if not shouldContinueBecauseStopRequested
+                        then true     // If no more stop requested and there's at least 1 person waiting on landing, then we stop, regardless of whether it's moving up or down
+                        else
+                            let rec checkPersonGoingInCabinDirection lst =
+                                match lst with
+                                | [] -> false
+                                | p :: remainingPersons ->
+                                    if
+                                        (cabin.Direction = Up && p.ExitFloor > cabins[0].Floor)
+                                        || (cabin.Direction = Down && p.ExitFloor < cabins[0].Floor)
+                                    then
+                                        true
+                                    else
+                                        checkPersonGoingInCabinDirection remainingPersons
+
+                            checkPersonGoingInCabinDirection ll
+
+                if cabin.getStopRequested cabins[0].Floor || landingStopRequest then
                     { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration
                       Event = EndMovingFullSpeed }
                 else
@@ -429,10 +447,9 @@ module ElevatorModule =
                 match nf with
                 | None -> false
                 | Some fl ->
-                    if cabin.getStopRequested fl then
-                        true
-                    else
-                        checkRequestsOneDirection fl direction
+                    if cabin.getStopRequested fl then true
+                    elif not (List.isEmpty (landings.getPersons fl)) then true
+                    else checkRequestsOneDirection fl direction
 
             let rec checkRequests (floor: Floor) direction =
                 assert (direction <> NoDirection)
@@ -489,38 +506,51 @@ module ElevatorModule =
 
             let allowMoveIn () =
                 // If there's still a person on the floor that want to enter, give it 3 seconds to move in
-                // First version, person moves in the cabin, regardless of cabin direction and ignoring capacity
+                // First version, ignoring capacity
                 let cabin = cabins[0]
 
-                match landings.getPersons cabin.Floor with
-                | [] -> false
-                | p :: remainingPersons ->
-                    let updatedPerson = { p with EntryTime = Some clk }
-                    cabin.setStopRequested p.ExitFloor
+                let rec processPersonGoingInSameDirectionAsCabin lst =
+                    match lst with
+                    | [] -> false       // Nobody moved in
+                    | p :: remainingPersons ->
 
-                    let newDirection =
-                        if cabin.Direction = NoDirection then
-                            if p.ExitFloor > cabin.Floor then Up else Down
+                        let personGoesInSaveDirectionAsCabin =
+                            if cabin.Direction=NoDirection 
+                            then true   // If cabin has no direction, then let 1st person enter, it will decide on cabin direction
+                            else (cabin.Direction=Up && p.ExitFloor>cabin.Floor) || (cabin.Direction=Down && p.ExitFloor<cabin.Floor)
+
+                        if (personGoesInSaveDirectionAsCabin)
+                        then
+                            let updatedPerson = { p with EntryTime = Some clk }
+                            cabin.setStopRequested p.ExitFloor
+
+                            let newDirection =
+                                if cabin.Direction = NoDirection then
+                                    if p.ExitFloor > cabin.Floor then Up else Down
+                                else
+                                    cabin.Direction
+
+                            cabins[0] <-
+                                { cabin with
+                                    Persons = updatedPerson :: cabin.Persons
+                                    Direction = newDirection }
+
+                            landings.setPersons cabin.Floor remainingPersons
+
+                            // Elevator event to continue with next person moving out or in the elevator at current floor
+                            let evt =
+                                { ElevatorEvent.Clock = clk.addOffset moveInDuration
+                                  Event = EndOpeningDoors }
+
+                            elevatorQueue.Enqueue(evt, evt.Clock)
+                            true    // Indicates that a person moved in, so when it's done, we must check again whether another
+                                    // person is candidate to move in before starting motor
+
                         else
-                            cabin.Direction
+                            processPersonGoingInSameDirectionAsCabin remainingPersons
 
-                    cabins[0] <-
-                        { cabin with
-                            Persons = updatedPerson :: cabin.Persons
-                            Direction = newDirection }
-
-                    landings.setPersons cabin.Floor remainingPersons
-
-                    // Elevator event to continue with next person moving out or in the elevator at current floor
-                    let evt =
-                        { ElevatorEvent.Clock = clk.addOffset moveInDuration
-                          Event = EndOpeningDoors }
-
-                    elevatorQueue.Enqueue(evt, evt.Clock)
-
-                    true // Indicates that a person moved in, so we must chech again whether another person
-            // is candidate to move in before starting motor
-
+                processPersonGoingInSameDirectionAsCabin (landings.getPersons cabin.Floor)
+                        
             let cabin = cabins[0]
             assert (cabin.Motor = Off)
             assert (cabin.Door = Opening || cabin.Door = Open)
@@ -626,7 +656,7 @@ module ElevatorModule =
                 assert (nextElevatorEvent.Event = EndClosingDoors)
                 let remainigTime = nextElevatorEvent.Clock.minus clk
 
-                cabins[0] <- { cabin with Door = Opening }      // Door is now opening
+                cabins[0] <- { cabin with Door = Opening } // Door is now opening
 
                 // And we register a new EndOpeningDoors event for the cabin
                 let evt =
@@ -638,6 +668,8 @@ module ElevatorModule =
             else
                 // Cabin must move up or down, so we set direction and wiat for the doors to close,
                 // once the doors are closed, motor will turn on and start accelerating
+                cabin.setStopRequested entry
+
                 cabins[0] <-
                     { cabin with
                         Direction = if (entry > cabin.Floor) then Up else Down }
@@ -703,8 +735,8 @@ module PersonModule =
             LoggingModule.logPersonExit clk evt.Person
 
 
-    let printFinalStats () =
-        printfn "Final stats"
+    let printPersonStats () =
+        printfn "Person stats"
 
         printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
         printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
@@ -751,8 +783,9 @@ module SchedulerModule =
             |> List.filter (fun (optClk, _) -> optClk.IsSome)
 
         if comingEvents.IsEmpty then
-            printfn "\nFin de la simulation clk=%A\n" clk
-            PersonModule.printFinalStats ()
+            let (Clock c) = clk
+            printfn "\nEnd simulation clk: %d\n" c
+            PersonModule.printPersonStats ()
         else
             let minClock = (fst (List.minBy (fun (optClk, _) -> optClk) comingEvents)).Value
             let nextEvents = comingEvents |> List.filter (fun (opt, _) -> opt = Some(minClock))
