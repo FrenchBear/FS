@@ -11,7 +11,7 @@ let logMessage clk msg =
         let (Clock iClk) = clk
         printfn $"clk: {iClk, 4}  {msg}"
 
-let logCabinUpdate clk before after =
+let logCabinUpdate clk b before after =
     let lst = new System.Collections.Generic.List<string>()
 
     if before.Floor <> after.Floor then
@@ -32,7 +32,7 @@ let logCabinUpdate clk before after =
 
     let lstStopRequested = new System.Collections.Generic.List<string>()
 
-    for i in 0 .. levels - 1 do
+    for i in 0 .. b.levels - 1 do
         if before._StopRequested[i] <> after._StopRequested[i] then
             lstStopRequested.Add($"StopRequested[{i}]: {before._StopRequested[i]}→{after._StopRequested[i]}")
 

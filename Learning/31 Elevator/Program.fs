@@ -13,41 +13,47 @@
 // Runs the simulation
 // In charge of master clock progression
 // Find next event in line, process it, and iterates until there are no more events to process
-module Scheduler =
-    let rec processNextEvent (clk: Clock) =
-
-        let comingEvents =
-            [ (Person.getNextPersonEventClock (), Person.processEvent)
-              (Elevator.getNextElevatorEventClock (), Elevator.processEvent) ]
-            |> List.filter (fun (optClk, _) -> optClk.IsSome)
-
-        if comingEvents.IsEmpty then
-            let (Clock c) = clk
-            printfn "\nEnd simulation clk: %d" c
-            Person.printFinalStats ()
-            Elevator.printFinalStats ()
-        else
-            let minClock = (fst (List.minBy (fun (optClk, _) -> optClk) comingEvents)).Value
-            let nextEvents = comingEvents |> List.filter (fun (opt, _) -> opt = Some(minClock))
-
-            for (_, processor) in nextEvents do
-                processor minClock
-
-            processNextEvent minClock
-
-    let runScheduler () =
-        processNextEvent (Clock 0)
 
 
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
-printfn "Simulation parameters:"
-printfn $"  {personsToCarry} persons to carry arriving over {arrivalLength} seconds"
-printfn $"  1 elevator, {levels} levels"
+// Create DataBag
+let b =
+    { DataBag.levels = 6
+      numberOfCabins = 1
+      personsToCarry = 30
+      arrivalLength = 300
+      randomSeed = 1 }
 
-Person.initialize ()
-Elevator.initialize ()
+printfn "Simulation parameters:"
+printfn $"  {b.personsToCarry} persons to carry arriving over {b.arrivalLength} seconds"
+printfn $"  {b.numberOfCabins} elevator, {b.levels} levels"
+
+let elevators = Elevators.createNew b
+let persons = Persons.createNew b elevators
+elevators.persons <- Some persons
 
 printfn ""
-Scheduler.runScheduler ()
+
+let rec processNextEvent (clk: Clock) =
+    let comingEvents =
+        [ (persons.getNextPersonEventClock (), persons.processEvent)
+          (elevators.getNextElevatorEventClock (), elevators.processEvent) ]
+        |> List.filter (fun (optClk, _) -> optClk.IsSome)
+
+    if comingEvents.IsEmpty then
+        let (Clock c) = clk
+        printfn "\nEnd simulation clk: %d" c
+        persons.printFinalStats ()
+        elevators.printFinalStats ()
+    else
+        let minClock = (fst (List.minBy (fun (optClk, _) -> optClk) comingEvents)).Value
+        let nextEvents = comingEvents |> List.filter (fun (opt, _) -> opt = Some(minClock))
+
+        for (_, processor) in nextEvents do
+            processor minClock
+
+        processNextEvent minClock
+
+processNextEvent (Clock 0)

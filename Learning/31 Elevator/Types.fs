@@ -1,6 +1,6 @@
 ﻿// 31 Elevator
 // Elevator simulation in F#
-// Module Types, first module loaded, define constants and types. Global variables have been moves to Globals module
+// Module Types, first module loaded, define constants and types
 //
 // 2014-08-15   PV
 
@@ -13,15 +13,6 @@ module Types
 let showLog = false
 let showEvents = false
 let showInitialPersons = false
-let randomSeed = 1
-
-// Extent of simulation
-let personsToCarry = 30
-let arrivalLength = 300
-
-// Elevator and building
-let numberOfCabins = 1
-let levels = 6 // 0=Ground, and levels 1..5
 
 let accelerationDuration = 2 // and deceleration duration
 let oneLevelFullSpeed = 4
@@ -52,6 +43,13 @@ let moveInDuration = 2 // and move out duration
 // ----------------------------------------------------------------------------
 // Types
 
+type DataBag =
+    { levels: int
+      numberOfCabins: int
+      personsToCarry: int
+      arrivalLength: int
+      randomSeed: int }
+
 type Direction =
     | NoDirection
     | Up
@@ -61,7 +59,7 @@ type Direction =
 type Floor =
     | Floor of int
 
-    member this.nextFloor direction =
+    member this.nextFloor levels direction =
         let (Floor sf) = this
 
         match direction with
@@ -195,3 +193,25 @@ type ElevatorEvent =
       Event: ElevatorEventDetail }
 
 
+
+// ----------------------------------------
+// Actors
+
+type Elevators =
+    { b: DataBag
+      elevatorEventsQueue: System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>
+      cabins: Cabin array
+      landings: Landings
+      mutable persons: Persons option }
+
+    member this.levels = this.b.levels
+
+and
+
+    Persons =
+    { b: DataBag
+      personEventsQueue: System.Collections.Generic.PriorityQueue<PersonEvent, Clock>
+      transportedPersons: System.Collections.Generic.List<Person>
+      elevators: Elevators }
+
+    member this.levels = this.b.levels
