@@ -10,9 +10,9 @@ module Types
 // ----------------------------------------------------------------------------
 // Simulation parameters
 
-let showLog = false
-let showEvents = false
-let showInitialPersons = false
+let showLog = true
+let showEvents = true
+let showInitialPersons = true
 
 let accelerationDuration = 2 // and deceleration duration
 let oneLevelFullSpeed = 4
@@ -72,13 +72,13 @@ type Clock =
     | Clock of int
 
     member this.addOffset offset =
-        let (Clock cl) = this
-        Clock(cl + offset)
+        let (Clock iClk) = this
+        Clock(iClk + offset)
 
-    member this.minus clk =
-        let (Clock cl) = this
-        let (Clock other) = clk
-        cl - other
+    member this.minus otherClk =
+        let (Clock iClk) = this
+        let (Clock iOther) = otherClk
+        iClk - iOther
 
 
 // ----------------------------------------
@@ -96,9 +96,9 @@ type Person =
 
     member private this.calcTime(endTime: Clock option) =
         assert (endTime.IsSome)
-        let (Clock arrival) = this.ArrivalTime
-        let (Clock endT) = endTime.Value
-        endT - arrival
+        let (Clock iArrival) = this.ArrivalTime
+        let (Clock iEndTime) = endTime.Value
+        iEndTime - iArrival
 
     member this.waitForElevator() = this.calcTime this.EntryTime
     member this.totalTransportation() = this.calcTime this.ExitTime
@@ -150,6 +150,16 @@ type Cabin =
         { this with
             _StopRequested = Array.copy this._StopRequested }
 
+type CabinStatistic =
+    | StatCabinIdle
+    | StatCabinBusy
+
+    | StatMotorOff
+    | StatMotorAccelerating
+    | StatMotorFullSpeed
+    | StatMotorDecelerating
+
+    | StatPersonsInCabin of int
 
 // ----------------------------------------
 // Landings
@@ -190,28 +200,29 @@ type ElevatorEventDetail =
 
 type ElevatorEvent =
     { Clock: Clock
+      // CabinIndex: int
       Event: ElevatorEventDetail }
-
 
 
 // ----------------------------------------
 // Actors
 
 type Elevators =
-    { b: DataBag
-      elevatorEventsQueue: System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>
-      cabins: Cabin array
-      landings: Landings
-      mutable persons: Persons option }     // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
+    { B: DataBag
+      ElevatorEventsQueue: System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>
+      Cabins: Cabin array
+      Statistics: (Clock * CabinStatistic) list array
+      Landings: Landings
+      mutable Persons: Persons option }     // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
 
-    member this.levels = this.b.levels
+    member this.levels = this.B.levels
 
 and
 
     Persons =
-    { b: DataBag
-      personEventsQueue: System.Collections.Generic.PriorityQueue<PersonEvent, Clock>
-      transportedPersons: System.Collections.Generic.List<Person>
-      elevators: Elevators }
+    { B: DataBag
+      PersonEventsQueue: System.Collections.Generic.PriorityQueue<PersonEvent, Clock>
+      TransportedPersons: System.Collections.Generic.List<Person>
+      Elevators: Elevators }
 
-    member this.levels = this.b.levels
+    member this.levels = this.B.levels

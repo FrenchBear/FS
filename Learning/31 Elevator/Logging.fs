@@ -73,15 +73,15 @@ let logPersonArrival clk p =
 
 let logPersonExit clk p =
     let (PersonId pid) = p.Id
-    let (Clock arrivalClk) = p.ArrivalTime
+    let (Clock arrivalIClk) = p.ArrivalTime
     let (Floor entry) = p.EntryFloor
     let (Floor exit) = p.ExitFloor
-    let (Clock entryClk) = p.EntryTime.Value
-    let waitingCabin = entryClk - arrivalClk
-    let (Clock exitClk) = p.ExitTime.Value
-    let totalTransportationTime = exitClk - arrivalClk
+    let (Clock entryIClk) = p.EntryTime.Value
+    let waitingCabin = entryIClk - arrivalIClk
+    let (Clock exitIClk) = p.ExitTime.Value
+    let totalTransportationTime = exitIClk - arrivalIClk
 
     logMessage
         clk
-        $"Person {pid} Exit, Arrival Floor {entry}@{arrivalClk}, Waited {waitingCabin}, Entered@{entryClk}, Exit Floor {exit}@{exitClk}, Total {totalTransportationTime}"
+        $"Person {pid} Exit, Arrival Floor {entry}@{arrivalIClk}, Waited {waitingCabin}, Entered@{entryIClk}, Exit Floor {exit}@{exitIClk}, Total {totalTransportationTime}"
 

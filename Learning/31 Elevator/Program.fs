@@ -22,8 +22,8 @@ printfn "Elevator simulation in F#\n"
 let b =
     { DataBag.levels = 6
       numberOfCabins = 1
-      personsToCarry = 30
-      arrivalLength = 300
+      personsToCarry = 1
+      arrivalLength = 60
       randomSeed = 1 }
 
 printfn "Simulation parameters:"
@@ -32,7 +32,7 @@ printfn $"  {b.numberOfCabins} elevator, {b.levels} levels"
 
 let elevators = Elevators.createNew b
 let persons = Persons.createNew b elevators
-elevators.persons <- Some persons
+elevators.Persons <- Some persons
 
 printfn ""
 
@@ -43,8 +43,8 @@ let rec processNextEvent (clk: Clock) eventCount =
         |> List.filter (fun (optClk, _) -> optClk.IsSome)
 
     if comingEvents.IsEmpty then
-        let (Clock c) = clk
-        printfn "\nEnd simulation clk: %d" c
+        let (Clock iClk) = clk
+        printfn "\nEnd simulation clk: %d" iClk
         persons.printFinalStats ()
         elevators.printFinalStats ()
         eventCount

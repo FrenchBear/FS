@@ -77,9 +77,6 @@ type Elevators with
             assert (cabin.Direction = NoDirection)
             assert (cabin.Cabin = Idle)
 
-            this.recordStat clk 0 StatMotorOff
-            this.recordStat clk 0 StatCabinIdle
-
         | EndAcceleration ->
             let cabin = this.Cabins[0]
             assert (cabin.Motor = Accelerating)
@@ -139,7 +136,6 @@ type Elevators with
                 if cabin.getStopRequested this.Cabins[0].Floor || landingStopRequest then
                     { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration; Event = EndMovingFullSpeed }
                 else
-                    this.recordStat clk 0 StatMotorFullSpeed
                     { ElevatorEvent.Clock = clk.addOffset oneLevelFullSpeed; Event = Decision }
 
             this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
@@ -155,7 +151,6 @@ type Elevators with
                 { ElevatorEvent.Clock = clk.addOffset accelerationDuration; Event = EndDeceleration }
 
             this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
-            this.recordStat clk 0 StatMotorDecelerating
             this.Cabins[0] <- { cabin with Motor = Decelerating }
 
         | EndDeceleration ->
@@ -164,8 +159,6 @@ type Elevators with
             assert (cabin.Door = Closed)
             assert (cabin.Direction <> NoDirection)
             assert (cabin.Cabin = Busy)
-
-            this.recordStat clk 0 StatMotorOff
 
             // Ok, we arrive at a floor with stop requested
             let evt =
@@ -295,7 +288,7 @@ type Elevators with
                 if not (allowMoveIn ()) then
                     // Nobody remaining to move out or move in, we can close the doors
                     this.Cabins[0] <- { cabin with Door = Closing }
-                    this.recordStat clk 0 (StatPersonsInCabin (List.length this.Cabins[0].Persons))
+
                     let evt = { ElevatorEvent.Clock = clk.addOffset 3; Event = EndClosingDoors }
 
                     this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
@@ -348,7 +341,6 @@ type Elevators with
 
             // If we call elevator from the floor the cabin is currently waiting, then we just have to open doors
             if cabin.Floor = entry then
-                this.recordStat clk 0 StatCabinBusy
                 this.Cabins[0] <-
                     { cabin with
                         Cabin = Busy
@@ -362,8 +354,6 @@ type Elevators with
             // Otherwise we start accelerating
             else
                 cabin.setStopRequested entry
-                this.recordStat clk 0 StatCabinBusy
-                this.recordStat clk 0 StatMotorAccelerating
 
                 this.Cabins[0] <-
                     { cabin with

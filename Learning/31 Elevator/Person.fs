@@ -12,10 +12,10 @@ open System.Linq
 type Persons with
     static member createNew b elevators =
         let newPerson = {
-            b = b
-            personEventsQueue = new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
-            transportedPersons = new System.Collections.Generic.List<Person>()
-            elevators = elevators
+            B = b
+            PersonEventsQueue = new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
+            TransportedPersons = new System.Collections.Generic.List<Person>()
+            Elevators = elevators
         }
 
         let rndPersons = new System.Random(b.randomSeed)
@@ -54,20 +54,20 @@ type Persons with
                 { PersonEvent.Clock = p.ArrivalTime
                   Person = p
                   Event = Arrival }
-            newPerson.personEventsQueue.Enqueue(evt, evt.Clock)
+            newPerson.PersonEventsQueue.Enqueue(evt, evt.Clock)
 
         newPerson
 
 
     member this.getNextPersonEventClock () =
-        if this.personEventsQueue.Count = 0 then
+        if this.PersonEventsQueue.Count = 0 then
             None
         else
-            let evt = this.personEventsQueue.Peek()
+            let evt = this.PersonEventsQueue.Peek()
             Some(evt.Clock)
 
     member this.processEvent clk =
-        let evt = this.personEventsQueue.Dequeue()
+        let evt = this.PersonEventsQueue.Dequeue()
 
         if showEvents then
             Logging.logMessage evt.Clock $"Person evt: {evt}"
@@ -77,12 +77,12 @@ type Persons with
         match evt.Event with
         | Arrival ->
             Logging.logPersonArrival clk evt.Person
-            let prevList = this.elevators.landings.getPersons evt.Person.EntryFloor
-            this.elevators.landings.setPersons evt.Person.EntryFloor (evt.Person :: prevList)
-            this.elevators.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
+            let prevList = this.Elevators.Landings.getPersons evt.Person.EntryFloor
+            this.Elevators.Landings.setPersons evt.Person.EntryFloor (evt.Person :: prevList)
+            this.Elevators.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
 
         | ExitCabin ->
-            this.transportedPersons.Add(evt.Person)
+            this.TransportedPersons.Add(evt.Person)
             Logging.logPersonExit clk evt.Person
 
 
@@ -92,21 +92,21 @@ type Persons with
         printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
         printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
 
-        for p in this.transportedPersons.OrderBy(fun p -> p.ArrivalTime) do
+        for p in this.TransportedPersons.OrderBy(fun p -> p.ArrivalTime) do
             let (PersonId pid) = p.Id
             let (Floor entryFloor) = p.EntryFloor
             let (Floor exitFloor) = p.ExitFloor
-            let (Clock arrivalTime) = p.ArrivalTime
-            let (Clock entryTime) = p.EntryTime.Value
-            let (Clock exitTime) = p.ExitTime.Value
+            let (Clock iArrival) = p.ArrivalTime
+            let (Clock iEntry) = p.EntryTime.Value
+            let (Clock iExit) = p.ExitTime.Value
 
-            let waitForElevator = entryTime - arrivalTime
-            let totalTransportTime = exitTime - arrivalTime
+            let waitForElevator = iEntry - iArrival
+            let totalTransportTime = iExit - iArrival
 
             printfn
-                $"  {pid, 4}  {entryFloor, 7} {exitFloor, 7}  {arrivalTime, 8} {entryTime, 8} {exitTime, 8}  {waitForElevator, 8} {totalTransportTime, 8}"
+                $"  {pid, 4}  {entryFloor, 7} {exitFloor, 7}  {iArrival, 8} {iEntry, 8} {iExit, 8}  {waitForElevator, 8} {totalTransportTime, 8}"
 
-        let ls = List.ofSeq this.transportedPersons
+        let ls = List.ofSeq this.TransportedPersons
 
         let avgWaitForElevator =
             double (ls |> List.sumBy (fun p -> p.waitForElevator ()))
