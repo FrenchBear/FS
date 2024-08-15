@@ -28,7 +28,7 @@ type Elevators with
         }
 
         // Initial event, just to check that initial state is Ok
-        newElevator.registerEvent  { ElevatorEvent.Clock = Clock 0; Event = ElevatorOn }
+        newElevator.registerEvent  { ElevatorEvent.Clock = Clock 0; CabinIndex=0; Event = ElevatorOn }
 
         newElevator
 
@@ -87,11 +87,7 @@ type Elevators with
             assert (cabin.Direction <> NoDirection)
             assert (cabin.Cabin = Busy)
 
-            let evt =
-                { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration
-                  Event = Decision }
-
-            this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
+            this.registerEvent { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration; CabinIndex=0; Event = Decision }
             this.Cabins[0] <- { cabin with Motor = FullSpeed }
 
         | Decision ->
@@ -137,12 +133,12 @@ type Elevators with
                             checkPersonGoingInCabinDirection ll
 
                 if cabin.getStopRequested this.Cabins[0].Floor || landingStopRequest then
-                    { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration; Event = EndMovingFullSpeed }
+                    { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration; CabinIndex=0; Event = EndMovingFullSpeed }
                 else
                     this.recordStat clk 0 StatMotorFullSpeed
-                    { ElevatorEvent.Clock = clk.addOffset oneLevelFullSpeed; Event = Decision }
+                    { ElevatorEvent.Clock = clk.addOffset oneLevelFullSpeed; CabinIndex=0; Event = Decision }
 
-            this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
+            this.registerEvent evt
 
         | EndMovingFullSpeed ->
             let cabin = this.Cabins[0]
@@ -152,7 +148,7 @@ type Elevators with
             assert (cabin.Cabin = Busy)
 
             let evt =
-                { ElevatorEvent.Clock = clk.addOffset accelerationDuration; Event = EndDeceleration }
+                { ElevatorEvent.Clock = clk.addOffset accelerationDuration; CabinIndex=0; Event = EndDeceleration }
 
             this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
             this.recordStat clk 0 StatMotorDecelerating
@@ -169,7 +165,7 @@ type Elevators with
 
             // Ok, we arrive at a floor with stop requested
             let evt =
-                { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration; Event = EndOpeningDoors }
+                { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration; CabinIndex=0; Event = EndOpeningDoors }
 
             this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
 
@@ -224,6 +220,7 @@ type Elevators with
                     // Elevator event to continue with next person moving out or in the elevator at current floor
                     let evt =
                         { ElevatorEvent.Clock = clk.addOffset moveInDuration
+                          CabinIndex=0
                           Event = EndOpeningDoors }
 
                     this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
@@ -274,7 +271,7 @@ type Elevators with
 
                             // Elevator event to continue with next person moving out or in the elevator at current floor
                             let evt =
-                                { ElevatorEvent.Clock = clk.addOffset moveInDuration; Event = EndOpeningDoors }
+                                { ElevatorEvent.Clock = clk.addOffset moveInDuration; CabinIndex=0; Event = EndOpeningDoors }
 
                             this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
                             true // Indicates that a person moved in, so when it's done, we must check again whether another
@@ -296,7 +293,7 @@ type Elevators with
                     // Nobody remaining to move out or move in, we can close the doors
                     this.Cabins[0] <- { cabin with Door = Closing }
                     this.recordStat clk 0 (StatPersonsInCabin (List.length this.Cabins[0].Persons))
-                    let evt = { ElevatorEvent.Clock = clk.addOffset 3; Event = EndClosingDoors }
+                    let evt = { ElevatorEvent.Clock = clk.addOffset 3; CabinIndex=0; Event = EndClosingDoors }
 
                     this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
 
@@ -321,7 +318,7 @@ type Elevators with
                 this.Cabins[0] <- { this.Cabins[0] with Motor = Accelerating }
 
                 let evt =
-                    { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration; Event = EndAcceleration }
+                    { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration; CabinIndex=0; Event = EndAcceleration }
 
                 this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
 
@@ -355,7 +352,7 @@ type Elevators with
                         Door = Opening }
 
                 let evt =
-                    { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration; Event = EndOpeningDoors }
+                    { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration; CabinIndex=0; Event = EndOpeningDoors }
 
                 this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
 
@@ -372,7 +369,7 @@ type Elevators with
                         Direction = if (entry > cabin.Floor) then Up else Down }
 
                 let evt =
-                    { ElevatorEvent.Clock = clk.addOffset accelerationDuration; Event = EndAcceleration }
+                    { ElevatorEvent.Clock = clk.addOffset accelerationDuration; CabinIndex=0; Event = EndAcceleration }
 
                 this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
 
@@ -392,7 +389,7 @@ type Elevators with
 
                     // And we register a new EndOpeningDoors event for the cabin
                     let evt =
-                        { ElevatorEvent.Clock = clk.addOffset (openingDoorsDuration - remainigTime); Event = EndOpeningDoors }
+                        { ElevatorEvent.Clock = clk.addOffset (openingDoorsDuration - remainigTime); CabinIndex=0; Event = EndOpeningDoors }
 
                     this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
 

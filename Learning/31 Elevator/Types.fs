@@ -200,7 +200,7 @@ type ElevatorEventDetail =
 
 type ElevatorEvent =
     { Clock: Clock
-      // CabinIndex: int
+      CabinIndex: int
       Event: ElevatorEventDetail }
 
 
