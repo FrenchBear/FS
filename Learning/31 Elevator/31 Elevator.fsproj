@@ -11,6 +11,7 @@
 
 	<ItemGroup>
 		<Compile Include="Types.fs" />
+		<Compile Include="Globals.fs" />
 		<Compile Include="Logging.fs" />
 		<Compile Include="Elevator.fs" />
 		<Compile Include="Person.fs" />

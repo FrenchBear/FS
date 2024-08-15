@@ -1,6 +1,6 @@
 ﻿// 31 Elevator
 // Elevator simulation in F#
-// Module Types, first module loaded, define constants and types
+// Module Types, first module loaded, define constants and types. Global variables have been moves to Globals module
 //
 // 2014-08-15   PV
 
@@ -153,19 +153,6 @@ type Cabin =
             _StopRequested = Array.copy this._StopRequested }
 
 
-let cabinInitialState =
-    { Floor = Floor 0
-      Motor = Off
-      Direction = NoDirection
-      Door = Closed
-      Cabin = Idle
-      _StopRequested = Array.create levels false
-      //Capacity = 10
-      Persons = [] }
-
-let cabins = Array.create numberOfCabins cabinInitialState
-
-
 // ----------------------------------------
 // Landings
 
@@ -179,8 +166,6 @@ type Landings =
     member this.setPersons (floor: Floor) value =
         let (Floor fl) = floor
         this._Persons[fl] <- value
-
-let landings = { Landings._Persons = [| for i in 0 .. levels - 1 -> [] |] }
 
 
 // ----------------------------------------
@@ -210,10 +195,3 @@ type ElevatorEvent =
       Event: ElevatorEventDetail }
 
 
-// ----------------------------------------
-// Priority queues
-let elevatorQueue =
-    new System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>()
-
-let personEventQueue =
-    new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()

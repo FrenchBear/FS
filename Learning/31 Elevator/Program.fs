@@ -3,6 +3,7 @@
 //
 // 2024-08-13   PV      First version, only 1 cabin
 
+// ToDo: Global simulation stats (real duration, number of events, ...)
 // ToDo: Final elevator stats: travel distance/time/accelerations, max persons transported, ...
 // ToDo: Manage elevator capacity
 // ToDo: On landings, last arrived person is 1st on the list, so 1st to enter in the elevator, that should not be the
