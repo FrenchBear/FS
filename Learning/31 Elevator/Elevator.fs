@@ -6,12 +6,13 @@
 [<AutoOpen>]
 module Elevator
 
+let initialize () =
 // Initial event, just to check that initial state is Ok
-let evt =
-    { ElevatorEvent.Clock = Clock 0
-      Event = ElevatorOn }
+    let evt =
+        { ElevatorEvent.Clock = Clock 0
+          Event = ElevatorOn }
 
-elevatorQueue.Enqueue(evt, evt.Clock)
+    elevatorQueue.Enqueue(evt, evt.Clock)
 
 let getNextElevatorEventClock () =
     if elevatorQueue.Count = 0 then
@@ -36,9 +37,10 @@ let processEvent (clk: Clock) =
     let evt = elevatorQueue.Dequeue()
     assert (clk = evt.Clock)
 
-    if traceEvents then
-        printfn "\nEvevator.processEvent evt=%0A" evt
-        printfn "  cabin: %0A" cabins[0]
+    if showEvents then
+        Logging.logMessage evt.Clock $"Elevator evt: {evt}, cabin: {cabins[0]}"
+        //printfn "\nEvevator.processEvent evt=%0A" evt
+        //printfn "  cabin: %0A" cabins[0]
 
     // Keep a deep copy for final logging
     let originalCabin = cabins[0].deepCopy ()
@@ -299,7 +301,7 @@ let processEvent (clk: Clock) =
 let callElevator (clk: Clock) (entry: Floor) (exit: Floor) =
     assert (exit <> entry)
 
-    if traceEvents then
+    if showEvents then
         printfn "\nCalling elevator from level %A to go to level %A" entry exit
 
     // Keep a deep copy for final logging
@@ -375,3 +377,9 @@ let callElevator (clk: Clock) (entry: Floor) (exit: Floor) =
                     Direction = if (entry > cabin.Floor) then Up else Down }
 
     Logging.logCabinUpdate clk originalCabin cabins[0]
+
+
+let printFinalStats () =
+    printfn "\nElevator stats"
+    printfn "  ToDo"
+

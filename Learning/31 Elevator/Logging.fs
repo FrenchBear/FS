@@ -7,8 +7,9 @@
 module Logging
 
 let logMessage clk msg =
-    let (Clock iClk) = clk
-    printfn $"clk: {iClk, 4}  {msg}"
+    if showLog then
+        let (Clock iClk) = clk
+        printfn $"clk: {iClk, 4}  {msg}"
 
 let logCabinUpdate clk before after =
     let lst = new System.Collections.Generic.List<string>()
@@ -82,6 +83,5 @@ let logPersonExit clk p =
 
     logMessage
         clk
-        // $"Person {pid} Exit on Floor {exit} at {exitClk}, Arrived on Floor {entry} at {arrivalClk}, Entered cabin at {entryClk} after waiting {waitingCabin}, Total time {totalTransportationTime}"
         $"Person {pid} Exit, Arrival Floor {entry}@{arrivalClk}, Waited {waitingCabin}, Entered@{entryClk}, Exit Floor {exit}@{exitClk}, Total {totalTransportationTime}"
 

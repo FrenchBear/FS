@@ -6,7 +6,7 @@
 		<RootNamespace>FS31</RootNamespace>
 		<description>Learning F#, Elevator simulation</description>
 		<Authors>Pierre Violent</Authors>
-		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
+		<Copyright>Copyright ©2024 Pierre Violent</Copyright>
 	</PropertyGroup>
 
 	<ItemGroup>

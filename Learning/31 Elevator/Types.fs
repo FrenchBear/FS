@@ -1,19 +1,22 @@
 ﻿// 31 Elevator
 // Elevator simulation in F#
+// Module Types, first module loaded, define constants and types
 //
 // 2014-08-15   PV
 
 [<AutoOpen>]
 module Types
 
-printfn "Hello"
-System.Console.OutputEncoding <- System.Text.Encoding.UTF8
+// ----------------------------------------------------------------------------
+// Simulation parameters
 
-let traceEvents = false
+let showLog = false
+let showEvents = false
+let showInitialPersons = false
 let randomSeed = 1
 
 // Extent of simulation
-let personsToCarry = 10
+let personsToCarry = 30
 let arrivalLength = 300
 
 // Elevator and building
@@ -45,6 +48,9 @@ let moveInDuration = 2 // and move out duration
     One level with full speed, from decision point to next decision point: 4s
 *)
 
+
+// ----------------------------------------------------------------------------
+// Types
 
 type Direction =
     | NoDirection
