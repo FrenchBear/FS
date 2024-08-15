@@ -10,9 +10,9 @@ module Types
 // ----------------------------------------------------------------------------
 // Simulation parameters
 
-let showLog = true
+let showLog = false
 let showEvents = false
-let showInitialPersons = true
+let showInitialPersons = false
 
 let accelerationDuration = 2 // and deceleration duration
 let oneLevelFullSpeed = 3
@@ -164,6 +164,16 @@ type CabinStatistic =
 
     | StatPersonsInCabin of int
 
+    | StatEndSimulation
+
+type RunningStatus =
+    { LastMotorOn: Clock
+      LastMotorOff: Clock
+      IsMotorOn: bool
+      MotorOnTime: int 
+      MotorOffTime: int
+    }
+
 // ----------------------------------------
 // Landings
 
@@ -216,7 +226,7 @@ type Elevators =
       Cabins: Cabin array
       Statistics: (Clock * CabinStatistic) list array
       Landings: Landings
-      mutable Persons: Persons option }     // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
+      mutable Persons: Persons option } // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
 
     member this.levels = this.B.levels
 

@@ -448,7 +448,67 @@ type Elevators with
     member this.printFinalStats() =
         printfn "\nElevator stats"
 
-        for clk, ce in List.rev this.Statistics[0] do
-            let (Clock iClk) = clk
-            printf $"clk: {iClk, 4}  "
-            printfn "%0A" ce
+        // Register special stat event to make sure final states are cumulated correctly
+        let (clk, _) = List.head this.Statistics[0]
+        this.recordStat clk 0 StatEndSimulation
+
+        let (Clock duration) = clk
+        let elsl = List.rev this.Statistics[0]
+
+        //for clk, ce in elsl do
+        //    let (Clock iClk) = clk
+        //    printf $"clk: {iClk, 4}  "
+        //    printfn "%0A" ce
+
+        let rec cumulate list (acc: RunningStatus) =
+            match list with
+            | [] -> acc
+            | (clk: Clock, ce: CabinStatistic) :: tail ->
+                let newAcc =
+                    match ce with
+                    | StatMotorOff ->
+                        assert (clk = Clock 0 || acc.IsMotorOn = true)
+
+                        { acc with
+                            MotorOnTime = acc.MotorOnTime + (clk.minus acc.LastMotorOn)
+                            IsMotorOn = false
+                            LastMotorOff = clk }
+
+                    | StatMotorAccelerating ->
+                        { acc with
+                            MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOff)
+                            IsMotorOn = true
+                            LastMotorOn = clk }
+
+                    | StatEndSimulation ->
+                        assert (acc.IsMotorOn = false)
+
+                        { acc with
+                            MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOff)
+                            LastMotorOff = clk }
+
+                    | _ -> acc
+
+                cumulate tail newAcc
+
+        let start =
+            { RunningStatus.LastMotorOn = Clock 0
+              LastMotorOff = Clock 0
+              IsMotorOn = false
+              MotorOnTime = 0
+              MotorOffTime = 0 }
+
+        let final = cumulate elsl start
+        assert (duration = final.MotorOnTime + final.MotorOffTime)
+
+        printfn "  Simulation duration:     %d" duration
+
+        printfn
+            "  Motor on during          %d = %.1f%% of simulation"
+            final.MotorOnTime
+            (100.0 * double final.MotorOnTime / double duration)
+
+        printfn
+            "  Motor off during         %d = %.1f%% of simulation"
+            final.MotorOffTime
+            (100.0 * double final.MotorOffTime / double duration)

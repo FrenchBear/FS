@@ -117,5 +117,5 @@ type Persons with
             / double (List.length ls)
 
         printfn ""
-        printfn "Average wait for elevator: %4.1f" avgWaitForElevator
-        printfn "Average total transport:   %4.1f" avgTotalTransport
+        printfn "  Average wait for elevator: %4.1f" avgWaitForElevator
+        printfn "  Average total transport:   %4.1f" avgTotalTransport
