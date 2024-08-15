@@ -36,7 +36,7 @@ elevators.persons <- Some persons
 
 printfn ""
 
-let rec processNextEvent (clk: Clock) =
+let rec processNextEvent (clk: Clock) eventCount =
     let comingEvents =
         [ (persons.getNextPersonEventClock (), persons.processEvent)
           (elevators.getNextElevatorEventClock (), elevators.processEvent) ]
@@ -47,6 +47,7 @@ let rec processNextEvent (clk: Clock) =
         printfn "\nEnd simulation clk: %d" c
         persons.printFinalStats ()
         elevators.printFinalStats ()
+        eventCount
     else
         let minClock = (fst (List.minBy (fun (optClk, _) -> optClk) comingEvents)).Value
         let nextEvents = comingEvents |> List.filter (fun (opt, _) -> opt = Some(minClock))
@@ -54,6 +55,12 @@ let rec processNextEvent (clk: Clock) =
         for (_, processor) in nextEvents do
             processor minClock
 
-        processNextEvent minClock
+        processNextEvent minClock (eventCount + List.length nextEvents)
 
-processNextEvent (Clock 0)
+let sw = System.Diagnostics.Stopwatch.StartNew()
+let eventCount = processNextEvent (Clock 0) 0
+sw.Stop()
+
+printfn "\nSimulation stats" 
+printfn $"  Real time duration:      {float (sw.ElapsedMilliseconds) / 1000.0:F3}s"
+printfn $"  Events processed:        {eventCount}"

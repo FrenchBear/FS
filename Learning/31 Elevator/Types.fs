@@ -202,7 +202,7 @@ type Elevators =
       elevatorEventsQueue: System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>
       cabins: Cabin array
       landings: Landings
-      mutable persons: Persons option }
+      mutable persons: Persons option }     // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
 
     member this.levels = this.b.levels
 
