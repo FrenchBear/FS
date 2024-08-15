@@ -11,11 +11,11 @@ module Types
 // Simulation parameters
 
 let showLog = true
-let showEvents = true
+let showEvents = false
 let showInitialPersons = true
 
 let accelerationDuration = 2 // and deceleration duration
-let oneLevelFullSpeed = 4
+let oneLevelFullSpeed = 3
 let fullSpeedBeforeDecisionDuration = 1 // and after decision before deceleration
 let openingDoorsDuration = 3 // and closing doors duration; Include delay between motor off/opening and closed/motor on
 let moveInDuration = 2 // and move out duration
@@ -24,19 +24,19 @@ let moveInDuration = 2 // and move out duration
     One level with acceleration, decision, and deceleration: 6s
     -+----
      |   \
-    -+-  | Decelerating: 2s
+    -+-  | Decelerating: 2s (accelerationDuration)
      |   /
     -+-
-     |   FullSpeed: 1s
+     |   FullSpeed: 1s (fullSpeedBeforeDecisionDuration)
     -+-  Decision point = half level, decide whether we continue full speed or we stop
-     |   FullSpeed: 1s
+     |   FullSpeed: 1s (fullSpeedBeforeDecisionDuration)
     -+-
      |   \
-    -+-  | Accelerating: 2s
+    -+-  | Accelerating: 2s (accelerationDuration)
      |   /
     -+----
 
-    One level with full speed, from decision point to next decision point: 4s
+    One level with full speed, from decision point to next decision point: 3s (oneLevelFullSpeed)
 *)
 
 
@@ -158,6 +158,9 @@ type CabinStatistic =
     | StatMotorAccelerating
     | StatMotorFullSpeed
     | StatMotorDecelerating
+
+    | StatDoorsOpen
+    | StatDoorsClosed
 
     | StatPersonsInCabin of int
 

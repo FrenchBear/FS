@@ -3,7 +3,6 @@
 //
 // 2024-08-13   PV      First version, only 1 cabin
 
-// ToDo: Global simulation stats (real duration, number of events, ...)
 // ToDo: Final elevator stats: travel distance/time/accelerations, max persons transported, ...
 // ToDo: Manage elevator capacity
 // ToDo: On landings, last arrived person is 1st on the list, so 1st to enter in the elevator, that should not be the
@@ -24,7 +23,7 @@ let b =
       numberOfCabins = 1
       personsToCarry = 1
       arrivalLength = 60
-      randomSeed = 1 }
+      randomSeed = 2 }
 
 printfn "Simulation parameters:"
 printfn $"  {b.personsToCarry} persons to carry arriving over {b.arrivalLength} seconds"
@@ -61,6 +60,6 @@ let sw = System.Diagnostics.Stopwatch.StartNew()
 let eventCount = processNextEvent (Clock 0) 0
 sw.Stop()
 
-printfn "\nSimulation stats" 
+printfn "\nSimulation stats"
 printfn $"  Real time duration:      {float (sw.ElapsedMilliseconds) / 1000.0:F3}s"
 printfn $"  Events processed:        {eventCount}"
