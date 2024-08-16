@@ -14,16 +14,16 @@ type ElevatorsActor with
               Direction = NoDirection
               Door = Closed
               Cabin = Idle
-              _StopRequested = Array.create b.SimulationElevators.levels false
-              //Capacity = 10
+              _StopRequested = Array.create b.SimulationElevators.Levels false
+              Capacity = b.SimulationElevators.Capacity
               Persons = [] }
 
         let newElevator =
             { B = b
               ElevatorEventsQueue = new System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>()
-              Cabins = Array.create b.SimulationElevators.numberOfCabins cabinInitialState
-              Statistics = Array.create b.SimulationElevators.numberOfCabins []
-              Landings = { Landings._Persons = [| for i in 0 .. b.SimulationElevators.levels - 1 -> [] |] }
+              Cabins = Array.create b.SimulationElevators.NumberOfCabins cabinInitialState
+              Statistics = Array.create b.SimulationElevators.NumberOfCabins []
+              Landings = { Landings._Persons = [| for i in 0 .. b.SimulationElevators.Levels - 1 -> [] |] }
               Persons = None }
 
         // Initial event, just to check that initial state is Ok
@@ -229,7 +229,7 @@ type ElevatorsActor with
             let allowMoveOut () =
                 // If there's still in the cabin a person that needs to get out, then give it 3 seconds to move out
                 let cabin = this.Cabins[0]
-                let ix = List.tryFindIndex (fun p -> p.ExitFloor = cabin.Floor) cabin.Persons
+                let ix = List.tryFindIndexBack (fun p -> p.ExitFloor = cabin.Floor) cabin.Persons
 
                 match ix with
                 | None -> false
@@ -262,45 +262,48 @@ type ElevatorsActor with
                 let cabin = this.Cabins[0]
 
                 let rec processPersonGoingInSameDirectionAsCabin lst =
-                    match lst with
-                    | [] -> false // Nobody moved in
-                    | p :: remainingPersons ->
+                    if List.length cabin.Persons = cabin.Capacity then
+                        false
+                    else
+                        match lst with
+                        | [] -> false // Nobody moved in
+                        | p :: remainingPersons ->
 
-                        let personGoesInSameDirectionAsCabin =
-                            if cabin.Direction = NoDirection then
-                                true // If cabin has no direction, then let 1st person enter, it will decide on cabin direction
-                            else
-                                (cabin.Direction = Up && p.ExitFloor > cabin.Floor)
-                                || (cabin.Direction = Down && p.ExitFloor < cabin.Floor)
-
-                        if (personGoesInSameDirectionAsCabin) then
-                            let updatedPerson = { p with EntryTime = Some clk }
-                            cabin.setStopRequested p.ExitFloor
-
-                            let newDirection =
+                            let personGoesInSameDirectionAsCabin =
                                 if cabin.Direction = NoDirection then
-                                    if p.ExitFloor > cabin.Floor then Up else Down
+                                    true // If cabin has no direction, then let 1st person enter, it will decide on cabin direction
                                 else
-                                    cabin.Direction
+                                    (cabin.Direction = Up && p.ExitFloor > cabin.Floor)
+                                    || (cabin.Direction = Down && p.ExitFloor < cabin.Floor)
 
-                            this.Cabins[0] <-
-                                { cabin with
-                                    Persons = updatedPerson :: cabin.Persons
-                                    Direction = newDirection }
+                            if (personGoesInSameDirectionAsCabin) then
+                                let updatedPerson = { p with EntryTime = Some clk }
+                                cabin.setStopRequested p.ExitFloor
 
-                            this.Landings.setPersons cabin.Floor remainingPersons
+                                let newDirection =
+                                    if cabin.Direction = NoDirection then
+                                        if p.ExitFloor > cabin.Floor then Up else Down
+                                    else
+                                        cabin.Direction
 
-                            // Elevator event to continue with next person moving out or in the elevator at current floor
-                            this.registerEvent
-                                { ElevatorEvent.Clock = clk.addOffset moveInDuration
-                                  CabinIndex = 0
-                                  Event = EndOpeningDoors }
+                                this.Cabins[0] <-
+                                    { cabin with
+                                        Persons = updatedPerson :: cabin.Persons
+                                        Direction = newDirection }
 
-                            true // Indicates that a person moved in, so when it's done, we must check again whether another
-                        // person is candidate to move in before starting motor
+                                this.Landings.setPersons cabin.Floor remainingPersons
 
-                        else
-                            processPersonGoingInSameDirectionAsCabin remainingPersons
+                                // Elevator event to continue with next person moving out or in the elevator at current floor
+                                this.registerEvent
+                                    { ElevatorEvent.Clock = clk.addOffset moveInDuration
+                                      CabinIndex = 0
+                                      Event = EndOpeningDoors }
+
+                                true // Indicates that a person moved in, so when it's done, we must check again whether another
+                            // person is candidate to move in before starting motor
+
+                            else
+                                processPersonGoingInSameDirectionAsCabin remainingPersons
 
                 // Use List.rev to make sure that the person who arrived first on the landing enters first in the cabin
                 processPersonGoingInSameDirectionAsCabin (List.rev (this.Landings.getPersons cabin.Floor))
@@ -447,7 +450,7 @@ type ElevatorsActor with
         Logging.logCabinUpdate clk this.B originalCabin this.Cabins[0]
 
 
-    member this.getElevatorsStats () =
+    member this.getElevatorsStats() =
 
         // Register special stat event to make sure final states are cumulated correctly
         let (clk, _) = List.head this.Statistics[0]
@@ -456,7 +459,7 @@ type ElevatorsActor with
         let (Clock duration) = clk
         let elsl = List.rev this.Statistics[0]
 
-        if showDetailedElevatorStats then
+        if showDetailedElevatorStatRecordss then
             for clk, ce in elsl do
                 let (Clock iClk) = clk
                 printf $"clk: {iClk, 4}  "
@@ -539,7 +542,7 @@ type ElevatorsActor with
 
               PersonsInCabin = 0
               MaxPersonsInCabin = 0
-              LevelsCovered = Array.create 50 0 } // 50 is temp value until capacity is managed
+              LevelsCovered = Array.create (this.Cabins[0].Capacity+1) 0 }
 
         let final = cumulate elsl start
         assert (duration = final.MotorOnTime + final.MotorOffTime)
@@ -558,7 +561,7 @@ type ElevatorsActor with
           LevelsCovered = final.LevelsCovered }
 
 
-    static member printElevatorStats (es:ElevatorsStats) =
+    static member printElevatorStats(es: ElevatorsStats) =
         printfn "\nElevator stats"
         printfn "  Simulation duration:       %d" es.SimulationDuration
 

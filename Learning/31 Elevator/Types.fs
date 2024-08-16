@@ -14,7 +14,7 @@ let showLog = false
 let showEvents = false
 let showInitialPersons = false
 let showDetailedPersonStats = false
-let showDetailedElevatorStats = false
+let showDetailedElevatorStatRecordss = false
 
 let accelerationDuration = 2 // and deceleration duration
 let oneLevelFullSpeed = 2
@@ -26,19 +26,19 @@ let moveInDuration = 2 // and move out duration
     One level with acceleration, decision, and deceleration: 6s
     -+----
      |   \
-    -+-  | Decelerating: 2s (accelerationDuration)
+    -+-  | Decelerating: accelerationDuration (2s), including extra dead time after cabin stopped before doors open
      |   /
     -+-
-     |   FullSpeed: 1s (fullSpeedBeforeDecisionDuration)
+     |   FullSpeed: fullSpeedBeforeDecisionDuration (1s)
     -+-  Decision point = half level, decide whether we continue full speed or we stop
-     |   FullSpeed: 1s (fullSpeedBeforeDecisionDuration)
+     |   FullSpeed: fullSpeedBeforeDecisionDuration (1s)
     -+-
      |   \
-    -+-  | Accelerating: 2s (accelerationDuration)
+    -+-  | Accelerating: accelerationDuration (2s), including dead time after door close before cabin starts moving
      |   /
     -+----
 
-    One level with full speed, from decision point to next decision point: 3s (oneLevelFullSpeed)
+    One level with full speed, from decision point to next decision point: oneLevelFullSpeed (2s)
 *)
 
 
@@ -124,7 +124,7 @@ type Cabin =
       Direction: Direction
       Cabin: CabinState
       _StopRequested: bool array
-      //Capacity: int
+      Capacity: int
       Persons: Person list }
 
     member this.getStopRequested floor =
@@ -224,11 +224,22 @@ type ElevatorEvent =
 // ----------------------------------------
 // Simulation data
 
-type SimulationElevators = { levels: int; numberOfCabins: int }
+type RandomPersonsAlgorithm =
+    | Ground50Levels50
+    | FullRandom
+
+type SimulationElevators =
+    { Levels: int
+      NumberOfCabins: int
+      Capacity: int }
 
 type SimulationPersons =
     | SimulationPersonsArray of Person array
-    | SimulationRandomGeneration of personsToCarry: int * arrivalLength: int * randomSeed: int * algorithm: int
+    | SimulationRandomGeneration of
+        personsToCarry: int *
+        arrivalLength: int *
+        randomSeed: int *
+        algorithm: RandomPersonsAlgorithm
 
 type DataBag =
     { SimulationElevators: SimulationElevators
@@ -246,7 +257,7 @@ type ElevatorsActor =
       Landings: Landings
       mutable Persons: PersonsActor option } // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
 
-    member this.levels = this.B.SimulationElevators.levels
+    member this.levels = this.B.SimulationElevators.Levels
 
 and
 
@@ -256,7 +267,7 @@ and
       TransportedPersons: System.Collections.Generic.List<Person>
       Elevators: ElevatorsActor }
 
-    member this.levels = this.B.SimulationElevators.levels
+    member this.levels = this.B.SimulationElevators.Levels
 
 
 // ----------------------------------------
@@ -274,12 +285,11 @@ type ElevatorsStats =
       MotorOnTime: int
       MotorOffTime: int
       CabinBusyTime: int
-      CabinIdleTime: int 
-      
+      CabinIdleTime: int
+
       MaxPersonsInCabin: int
       TotalFloorsTraveled: int
-      LevelsCovered: int array  
-    }
+      LevelsCovered: int array }
 
 type SimulationStats =
     { SimulationDuration: int

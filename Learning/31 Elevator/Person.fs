@@ -23,21 +23,30 @@ type PersonsActor with
             | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) ->
                 let rndPersons = new System.Random(randomSeed)
 
-                let getRandomPerson () =
+                let rec getRandomPerson () =
                     let entry, exit =
-                        if rndPersons.Next(2) = 0 then
-                            Floor 0, Floor(rndPersons.Next(1, b.SimulationElevators.levels))
-                        else
-                            Floor(rndPersons.Next(1, b.SimulationElevators.levels)), Floor 0
+                        match algorithm with
+                        | Ground50Levels50 ->
+                            if rndPersons.Next(2) = 0 then
+                                Floor 0, Floor(rndPersons.Next(1, b.SimulationElevators.Levels))
+                            else
+                                Floor(rndPersons.Next(1, b.SimulationElevators.Levels)), Floor 0
 
-                    let arrival = Clock(rndPersons.Next(arrivalLength))
+                        | FullRandom ->
+                            Floor(rndPersons.Next(1, b.SimulationElevators.Levels)),
+                            Floor(rndPersons.Next(1, b.SimulationElevators.Levels))
 
-                    { Id = PersonId 0
-                      EntryFloor = entry
-                      ExitFloor = exit
-                      ArrivalTime = arrival
-                      EntryTime = None
-                      ExitTime = None }
+                    if entry = exit then
+                        getRandomPerson ()
+                    else
+                        let arrival = Clock(rndPersons.Next(arrivalLength))
+
+                        { Id = PersonId 0
+                          EntryFloor = entry
+                          ExitFloor = exit
+                          ArrivalTime = arrival
+                          EntryTime = None
+                          ExitTime = None }
 
                 // First generate a random list
                 let tempPersonsArray = [| for _ in 0 .. personsToCarry - 1 -> getRandomPerson () |]
@@ -45,9 +54,9 @@ type PersonsActor with
                 // Then sort by arrival time and assign Ids in arrival order
                 Array.sortInPlaceBy (fun p -> p.ArrivalTime) tempPersonsArray
 
-                [| for i in 1..personsToCarry ->
+                [| for i in 0 .. personsToCarry - 1 ->
                        { tempPersonsArray[i] with
-                           Id = PersonId i } |]
+                           Id = PersonId(i + 1) } |]
 
         if showInitialPersons then
             printfn "\nPersons for the simulation"
