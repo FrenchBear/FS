@@ -116,6 +116,16 @@ type Persons with
             double (ls |> List.sumBy (fun p -> p.totalTransportation ()))
             / double (List.length ls)
 
+        let maxWaitForElevator =
+            ls |> List.map (fun p -> p.waitForElevator ()) |> List.max
+
+        let maxTotalTransport =
+            ls |> List.map (fun p -> p.totalTransportation ()) |> List.max
+
         printfn ""
-        printfn "  Average wait for elevator: %4.1f" avgWaitForElevator
-        printfn "  Average total transport:   %4.1f" avgTotalTransport
+        printfn "  Average wait for elevator: %.1f" avgWaitForElevator
+        printfn "  Average total transport:   %.1f" avgTotalTransport
+        printfn "  Max wait for elevator:     %d" maxWaitForElevator
+        printfn "  Max total transportation:  %d" maxTotalTransport
+
+        // ToDo: show median values, and max for 95% of users

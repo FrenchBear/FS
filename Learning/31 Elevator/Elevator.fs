@@ -430,7 +430,7 @@ type Elevators with
                           Event = EndOpeningDoors }
 
                 else
-                    assert (cabin.Door = Opening)
+                    assert (cabin.Door = Opening || cabin.Door=Open)
                     () // Just wait for the door to open
 
             else
@@ -480,11 +480,32 @@ type Elevators with
                             IsMotorOn = true
                             LastMotorOn = clk }
 
+                    | StatCabinIdle ->
+                        assert (clk = Clock 0 || acc.IsActive = true)
+
+                        { acc with
+                            BusyTime = acc.BusyTime + (clk.minus acc.LastBusy)
+                            IsActive = false
+                            LastIdle = clk }
+
+                    | StatCabinBusy ->
+                        assert (acc.IsActive = false)
+
+                        { acc with
+                            IdleTime = acc.IdleTime + (clk.minus acc.LastIdle)
+                            IsActive = true
+                            LastBusy = clk }
+
+                    | StatPersonsInCabin np ->
+                        { acc with MaxPersonsInCabin = max acc.MaxPersonsInCabin np }
+
                     | StatEndSimulation ->
                         assert (acc.IsMotorOn = false)
+                        assert (acc.IsActive = false)
 
                         { acc with
                             MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOff)
+                            IdleTime = acc.IdleTime + (clk.minus acc.LastIdle)
                             LastMotorOff = clk }
 
                     | _ -> acc
@@ -492,14 +513,24 @@ type Elevators with
                 cumulate tail newAcc
 
         let start =
-            { RunningStatus.LastMotorOn = Clock 0
+            { LastMotorOn = Clock 0
               LastMotorOff = Clock 0
               IsMotorOn = false
               MotorOnTime = 0
-              MotorOffTime = 0 }
+              MotorOffTime = 0 
+
+              LastBusy = Clock 0
+              LastIdle = Clock 0
+              IsActive = false
+              BusyTime = 0
+              IdleTime = 0
+
+              MaxPersonsInCabin = 0
+            }
 
         let final = cumulate elsl start
         assert (duration = final.MotorOnTime + final.MotorOffTime)
+        assert (duration = final.BusyTime + final.IdleTime)
 
         printfn "  Simulation duration:     %d" duration
 
@@ -512,3 +543,15 @@ type Elevators with
             "  Motor off during         %d = %.1f%% of simulation"
             final.MotorOffTime
             (100.0 * double final.MotorOffTime / double duration)
+
+        printfn
+            "  Cabin busy during        %d = %.1f%% of simulation"
+            final.BusyTime
+            (100.0 * double final.BusyTime/ double duration)
+
+        printfn
+            "  Cabin idle during        %d = %.1f%% of simulation"
+            final.IdleTime
+            (100.0 * double final.IdleTime / double duration)
+
+        printfn "  Max persons in cabin     %d" final.MaxPersonsInCabin

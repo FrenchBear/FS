@@ -172,6 +172,14 @@ type RunningStatus =
       IsMotorOn: bool
       MotorOnTime: int 
       MotorOffTime: int
+
+      LastBusy: Clock
+      LastIdle: Clock
+      IsActive: bool
+      BusyTime: int
+      IdleTime: int
+
+      MaxPersonsInCabin: int
     }
 
 // ----------------------------------------

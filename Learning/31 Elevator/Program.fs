@@ -21,8 +21,8 @@ printfn "Elevator simulation in F#\n"
 let b =
     { DataBag.levels = 6
       numberOfCabins = 1
-      personsToCarry = 20
-      arrivalLength = 300
+      personsToCarry = 50
+      arrivalLength = 600
       randomSeed = 1 }
 
 printfn "Simulation parameters:"
