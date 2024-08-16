@@ -4,9 +4,9 @@
 // 2014-08-15   PV
 
 [<AutoOpen>]
-module Elevator
+module ElevatorsModule
 
-type Elevators with
+type ElevatorsActor with
     static member createNew b =
         let cabinInitialState =
             { Floor = Floor 0
@@ -14,16 +14,16 @@ type Elevators with
               Direction = NoDirection
               Door = Closed
               Cabin = Idle
-              _StopRequested = Array.create b.levels false
+              _StopRequested = Array.create b.SimulationElevators.levels false
               //Capacity = 10
               Persons = [] }
 
         let newElevator =
             { B = b
               ElevatorEventsQueue = new System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>()
-              Cabins = Array.create b.numberOfCabins cabinInitialState
-              Statistics = Array.create b.numberOfCabins []
-              Landings = { Landings._Persons = [| for i in 0 .. b.levels - 1 -> [] |] }
+              Cabins = Array.create b.SimulationElevators.numberOfCabins cabinInitialState
+              Statistics = Array.create b.SimulationElevators.numberOfCabins []
+              Landings = { Landings._Persons = [| for i in 0 .. b.SimulationElevators.levels - 1 -> [] |] }
               Persons = None }
 
         // Initial event, just to check that initial state is Ok
@@ -447,8 +447,7 @@ type Elevators with
         Logging.logCabinUpdate clk this.B originalCabin this.Cabins[0]
 
 
-    member this.printFinalStats() =
-        printfn "\nElevator stats"
+    member this.getElevatorsStats () =
 
         // Register special stat event to make sure final states are cumulated correctly
         let (clk, _) = List.head this.Statistics[0]
@@ -457,10 +456,11 @@ type Elevators with
         let (Clock duration) = clk
         let elsl = List.rev this.Statistics[0]
 
-        //for clk, ce in elsl do
-        //    let (Clock iClk) = clk
-        //    printf $"clk: {iClk, 4}  "
-        //    printfn "%0A" ce
+        if showDetailedElevatorStats then
+            for clk, ce in elsl do
+                let (Clock iClk) = clk
+                printf $"clk: {iClk, 4}  "
+                printfn "%0A" ce
 
         let rec cumulate list (acc: RunningStatus) =
             match list with
@@ -491,20 +491,20 @@ type Elevators with
                         acc
 
                     | StatCabinIdle ->
-                        assert (clk = Clock 0 || acc.IsActive = true)
+                        assert (clk = Clock 0 || acc.IsCabinBusy = true)
 
                         { acc with
-                            BusyTime = acc.BusyTime + (clk.minus acc.LastBusy)
-                            IsActive = false
-                            LastIdle = clk }
+                            CabinBusyTime = acc.CabinBusyTime + (clk.minus acc.LastCabinBusy)
+                            IsCabinBusy = false
+                            LastCabinIdle = clk }
 
                     | StatCabinBusy ->
-                        assert (acc.IsActive = false)
+                        assert (acc.IsCabinBusy = false)
 
                         { acc with
-                            IdleTime = acc.IdleTime + (clk.minus acc.LastIdle)
-                            IsActive = true
-                            LastBusy = clk }
+                            CabinIdleTime = acc.CabinIdleTime + (clk.minus acc.LastCabinIdle)
+                            IsCabinBusy = true
+                            LastCabinBusy = clk }
 
                     | StatPersonsInCabin np ->
                         { acc with
@@ -513,11 +513,11 @@ type Elevators with
 
                     | StatEndSimulation ->
                         assert (acc.IsMotorOn = false)
-                        assert (acc.IsActive = false)
+                        assert (acc.IsCabinBusy = false)
 
                         { acc with
                             MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOff)
-                            IdleTime = acc.IdleTime + (clk.minus acc.LastIdle)
+                            CabinIdleTime = acc.CabinIdleTime + (clk.minus acc.LastCabinIdle)
                             LastMotorOff = clk }
 
                     | _ -> acc
@@ -531,52 +531,65 @@ type Elevators with
               MotorOnTime = 0
               MotorOffTime = 0
 
-              LastBusy = Clock 0
-              LastIdle = Clock 0
-              IsActive = false
-              BusyTime = 0
-              IdleTime = 0
+              LastCabinBusy = Clock 0
+              LastCabinIdle = Clock 0
+              IsCabinBusy = false
+              CabinBusyTime = 0
+              CabinIdleTime = 0
 
               PersonsInCabin = 0
               MaxPersonsInCabin = 0
-              LevelsCovered = Array.create 50 0 }       // 50 is temp value until capacity is managed
+              LevelsCovered = Array.create 50 0 } // 50 is temp value until capacity is managed
 
         let final = cumulate elsl start
         assert (duration = final.MotorOnTime + final.MotorOffTime)
-        assert (duration = final.BusyTime + final.IdleTime)
+        assert (duration = final.CabinBusyTime + final.CabinIdleTime)
         assert (final.PersonsInCabin = 0)
 
-        printfn "  Simulation duration:     %d" duration
+        // Return an ElevatorStats record
+        { SimulationDuration = duration
+          MotorOnTime = final.MotorOnTime
+          MotorOffTime = final.MotorOffTime
+          CabinBusyTime = final.CabinBusyTime
+          CabinIdleTime = final.CabinIdleTime
+
+          MaxPersonsInCabin = final.MaxPersonsInCabin
+          TotalFloorsTraveled = Array.sum final.LevelsCovered
+          LevelsCovered = final.LevelsCovered }
+
+
+    static member printElevatorStats (es:ElevatorsStats) =
+        printfn "\nElevator stats"
+        printfn "  Simulation duration:       %d" es.SimulationDuration
 
         printfn
-            "  Motor on during          %d = %.1f%% of simulation"
-            final.MotorOnTime
-            (100.0 * double final.MotorOnTime / double duration)
+            "  Motor on during            %d = %.1f%% of simulation"
+            es.MotorOnTime
+            (100.0 * double es.MotorOnTime / double es.SimulationDuration)
 
         printfn
-            "  Motor off during         %d = %.1f%% of simulation"
-            final.MotorOffTime
-            (100.0 * double final.MotorOffTime / double duration)
+            "  Motor off during           %d = %.1f%% of simulation"
+            es.MotorOffTime
+            (100.0 * double es.MotorOffTime / double es.SimulationDuration)
 
         printfn
-            "  Cabin busy during        %d = %.1f%% of simulation"
-            final.BusyTime
-            (100.0 * double final.BusyTime / double duration)
+            "  Cabin busy during          %d = %.1f%% of simulation"
+            es.CabinBusyTime
+            (100.0 * double es.CabinBusyTime / double es.SimulationDuration)
 
         printfn
-            "  Cabin idle during        %d = %.1f%% of simulation"
-            final.IdleTime
-            (100.0 * double final.IdleTime / double duration)
+            "  Cabin idle during          %d = %.1f%% of simulation"
+            es.CabinIdleTime
+            (100.0 * double es.CabinIdleTime / double es.SimulationDuration)
 
-        printfn "  Max persons in cabin:    %d" final.MaxPersonsInCabin
+        printfn "  Max persons in cabin:      %d" es.MaxPersonsInCabin
 
-        let totalFloorsTraveled = Array.sum final.LevelsCovered
-        printfn "  Total levels traveled:   %d" totalFloorsTraveled
+        printfn "  Total levels traveled:     %d" es.TotalFloorsTraveled
 
-        for i in 0 .. final.MaxPersonsInCabin do
-            if final.LevelsCovered[i] > 0 then
+        for i in 0 .. es.MaxPersonsInCabin do
+            if es.LevelsCovered[i] > 0 then
                 printfn
                     "    Levels traveled with %d person(s) in cabin: %d = %.1f%% of total"
                     i
-                    final.LevelsCovered[i]
-                    (100.0 * double final.LevelsCovered[i] / double totalFloorsTraveled)
+                    es.LevelsCovered[i]
+                    (100.0 * double es.LevelsCovered[i] / double es.TotalFloorsTraveled)

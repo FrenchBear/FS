@@ -32,7 +32,7 @@ let logCabinUpdate clk b before after =
 
     let lstStopRequested = new System.Collections.Generic.List<string>()
 
-    for i in 0 .. b.levels - 1 do
+    for i in 0 .. b.SimulationElevators.levels - 1 do
         if before._StopRequested[i] <> after._StopRequested[i] then
             lstStopRequested.Add($"StopRequested[{i}]: {before._StopRequested[i]}→{after._StopRequested[i]}")
 

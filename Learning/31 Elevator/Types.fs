@@ -13,7 +13,8 @@ module Types
 let showLog = false
 let showEvents = false
 let showInitialPersons = false
-let showIndividualPersonStats = false
+let showDetailedPersonStats = false
+let showDetailedElevatorStats = false
 
 let accelerationDuration = 2 // and deceleration duration
 let oneLevelFullSpeed = 2
@@ -43,13 +44,6 @@ let moveInDuration = 2 // and move out duration
 
 // ----------------------------------------------------------------------------
 // Types
-
-type DataBag =
-    { levels: int
-      numberOfCabins: int
-      personsToCarry: int
-      arrivalLength: int
-      randomSeed: int }
 
 type Direction =
     | NoDirection
@@ -171,19 +165,18 @@ type RunningStatus =
     { LastMotorOn: Clock
       LastMotorOff: Clock
       IsMotorOn: bool
-      MotorOnTime: int 
+      MotorOnTime: int
       MotorOffTime: int
 
-      LastBusy: Clock
-      LastIdle: Clock
-      IsActive: bool
-      BusyTime: int
-      IdleTime: int
+      LastCabinBusy: Clock
+      LastCabinIdle: Clock
+      IsCabinBusy: bool
+      CabinBusyTime: int
+      CabinIdleTime: int
 
       PersonsInCabin: int
       MaxPersonsInCabin: int
-      LevelsCovered: int array
-    }
+      LevelsCovered: int array }
 
 // ----------------------------------------
 // Landings
@@ -229,24 +222,71 @@ type ElevatorEvent =
 
 
 // ----------------------------------------
+// Simulation data
+
+type SimulationElevators = { levels: int; numberOfCabins: int }
+
+type SimulationPersons =
+    | SimulationPersonsArray of Person array
+    | SimulationRandomGeneration of personsToCarry: int * arrivalLength: int * randomSeed: int * algorithm: int
+
+type DataBag =
+    { SimulationElevators: SimulationElevators
+      SimulationPersons: SimulationPersons }
+
+
+// ----------------------------------------
 // Actors
 
-type Elevators =
+type ElevatorsActor =
     { B: DataBag
       ElevatorEventsQueue: System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>
       Cabins: Cabin array
       Statistics: (Clock * CabinStatistic) list array
       Landings: Landings
-      mutable Persons: Persons option } // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
+      mutable Persons: PersonsActor option } // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
 
-    member this.levels = this.B.levels
+    member this.levels = this.B.SimulationElevators.levels
 
 and
 
-    Persons =
+    PersonsActor =
     { B: DataBag
       PersonEventsQueue: System.Collections.Generic.PriorityQueue<PersonEvent, Clock>
       TransportedPersons: System.Collections.Generic.List<Person>
-      Elevators: Elevators }
+      Elevators: ElevatorsActor }
 
-    member this.levels = this.B.levels
+    member this.levels = this.B.SimulationElevators.levels
+
+
+// ----------------------------------------
+// Simulation Results
+
+// ToDo: Add median values, and max for 95% of users
+type PersonsStats =
+    { AvgWaitForElevator: float
+      AvgTotalTransport: float
+      MaxWaitForElevator: int
+      MaxTotalTransport: int }
+
+type ElevatorsStats =
+    { SimulationDuration: int
+      MotorOnTime: int
+      MotorOffTime: int
+      CabinBusyTime: int
+      CabinIdleTime: int 
+      
+      MaxPersonsInCabin: int
+      TotalFloorsTraveled: int
+      LevelsCovered: int array  
+    }
+
+type SimulationStats =
+    { SimulationDuration: int
+      SimulationRealTimeDuration: float
+      SimulationEventsCount: int }
+
+type SimulationResult =
+    { SimulationStats: SimulationStats
+      ElevatorsStats: ElevatorsStats
+      PersonsStats: PersonsStats }

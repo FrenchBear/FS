@@ -5,61 +5,68 @@
 
 
 [<AutoOpen>]
-module Person
+module PersonsModule
 
 open System.Linq
 
-type Persons with
+type PersonsActor with
     static member createNew b elevators =
-        let newPerson = {
-            B = b
-            PersonEventsQueue = new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
-            TransportedPersons = new System.Collections.Generic.List<Person>()
-            Elevators = elevators
-        }
+        let newPersons =
+            { B = b
+              PersonEventsQueue = new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
+              TransportedPersons = new System.Collections.Generic.List<Person>()
+              Elevators = elevators }
 
-        let rndPersons = new System.Random(b.randomSeed)
+        let personsArray =
+            match b.SimulationPersons with
+            | SimulationPersonsArray pa -> pa
+            | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) ->
+                let rndPersons = new System.Random(randomSeed)
 
-        let getRandomPerson () =
-            let entry, exit =
-                if rndPersons.Next(2) = 0 then
-                    Floor 0, Floor(rndPersons.Next(1, b.levels))
-                else
-                    Floor(rndPersons.Next(1, b.levels)), Floor 0
+                let getRandomPerson () =
+                    let entry, exit =
+                        if rndPersons.Next(2) = 0 then
+                            Floor 0, Floor(rndPersons.Next(1, b.SimulationElevators.levels))
+                        else
+                            Floor(rndPersons.Next(1, b.SimulationElevators.levels)), Floor 0
 
-            let arrival = Clock(rndPersons.Next(b.arrivalLength))
+                    let arrival = Clock(rndPersons.Next(arrivalLength))
 
-            { Id = PersonId 0
-              EntryFloor = entry
-              ExitFloor = exit
-              ArrivalTime = arrival
-              EntryTime = None
-              ExitTime = None }
+                    { Id = PersonId 0
+                      EntryFloor = entry
+                      ExitFloor = exit
+                      ArrivalTime = arrival
+                      EntryTime = None
+                      ExitTime = None }
 
-        let tempPersonArray = [| for _ in 0 .. b.personsToCarry - 1 -> getRandomPerson () |]
-        Array.sortInPlaceBy (fun p -> p.ArrivalTime) tempPersonArray
+                // First generate a random list
+                let tempPersonsArray = [| for _ in 0 .. personsToCarry - 1 -> getRandomPerson () |]
 
-        let personArray =
-            [| for i in 0 .. b.personsToCarry - 1 ->
-                   { tempPersonArray[i] with
-                       Id = PersonId i } |]
+                // Then sort by arrival time and assign Ids in arrival order
+                Array.sortInPlaceBy (fun p -> p.ArrivalTime) tempPersonsArray
+
+                [| for i in 1..personsToCarry ->
+                       { tempPersonsArray[i] with
+                           Id = PersonId i } |]
 
         if showInitialPersons then
             printfn "\nPersons for the simulation"
-            for p in personArray do
+
+            for p in personsArray do
                 printfn "%0A" p
 
-        for p in personArray do
+        for p in personsArray do
             let evt =
                 { PersonEvent.Clock = p.ArrivalTime
                   Person = p
                   Event = Arrival }
-            newPerson.PersonEventsQueue.Enqueue(evt, evt.Clock)
 
-        newPerson
+            newPersons.PersonEventsQueue.Enqueue(evt, evt.Clock)
+
+        newPersons
 
 
-    member this.getNextPersonEventClock () =
+    member this.getNextPersonEventClock() =
         if this.PersonEventsQueue.Count = 0 then
             None
         else
@@ -86,28 +93,28 @@ type Persons with
             Logging.logPersonExit clk evt.Person
 
 
-    member this.printFinalStats () =
-        printfn "\nPerson stats"
+    member this.printDetailedPersonStats() =
+        printfn "Detailed Person stats"
+        printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
+        printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
 
-        if showIndividualPersonStats then
-            printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
-            printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
+        for p in this.TransportedPersons.OrderBy(fun p -> p.ArrivalTime) do
+            let (PersonId pid) = p.Id
+            let (Floor entryFloor) = p.EntryFloor
+            let (Floor exitFloor) = p.ExitFloor
+            let (Clock iArrival) = p.ArrivalTime
+            let (Clock iEntry) = p.EntryTime.Value
+            let (Clock iExit) = p.ExitTime.Value
 
-            for p in this.TransportedPersons.OrderBy(fun p -> p.ArrivalTime) do
-                let (PersonId pid) = p.Id
-                let (Floor entryFloor) = p.EntryFloor
-                let (Floor exitFloor) = p.ExitFloor
-                let (Clock iArrival) = p.ArrivalTime
-                let (Clock iEntry) = p.EntryTime.Value
-                let (Clock iExit) = p.ExitTime.Value
+            let waitForElevator = iEntry - iArrival
+            let totalTransportTime = iExit - iArrival
 
-                let waitForElevator = iEntry - iArrival
-                let totalTransportTime = iExit - iArrival
+            printfn
+                $"  {pid, 4}  {entryFloor, 7} {exitFloor, 7}  {iArrival, 8} {iEntry, 8} {iExit, 8}  {waitForElevator, 8} {totalTransportTime, 8}"
 
-                printfn
-                    $"  {pid, 4}  {entryFloor, 7} {exitFloor, 7}  {iArrival, 8} {iEntry, 8} {iExit, 8}  {waitForElevator, 8} {totalTransportTime, 8}"
-            printfn ""
+        printfn ""
 
+    member this.getPersonStats() =
         let ls = List.ofSeq this.TransportedPersons
 
         let avgWaitForElevator =
@@ -118,15 +125,20 @@ type Persons with
             double (ls |> List.sumBy (fun p -> p.totalTransportation ()))
             / double (List.length ls)
 
-        let maxWaitForElevator =
-            ls |> List.map (fun p -> p.waitForElevator ()) |> List.max
+        let maxWaitForElevator = ls |> List.map (fun p -> p.waitForElevator ()) |> List.max
 
         let maxTotalTransport =
             ls |> List.map (fun p -> p.totalTransportation ()) |> List.max
 
-        printfn "  Average wait for elevator: %.1f" avgWaitForElevator
-        printfn "  Average total transport:   %.1f" avgTotalTransport
-        printfn "  Max wait for elevator:     %d" maxWaitForElevator
-        printfn "  Max total transportation:  %d" maxTotalTransport
+        // Return a PersonsStats record
+        { AvgWaitForElevator = avgWaitForElevator
+          AvgTotalTransport = avgTotalTransport
+          MaxWaitForElevator = maxWaitForElevator
+          MaxTotalTransport = maxTotalTransport }
 
-        // ToDo: show median values, and max for 95% of users
+    static member printPersonStats ps =
+        printfn "Person stats"
+        printfn "  Average wait for elevator: %.1f" ps.AvgWaitForElevator
+        printfn "  Average total transport:   %.1f" ps.AvgTotalTransport
+        printfn "  Max wait for elevator:     %d" ps.MaxWaitForElevator
+        printfn "  Max total transportation:  %d" ps.MaxTotalTransport
