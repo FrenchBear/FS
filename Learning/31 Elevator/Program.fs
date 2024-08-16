@@ -3,10 +3,7 @@
 //
 // 2024-08-13   PV      First version, only 1 cabin
 
-// ToDo: Enhance elevator stats: travel distance total and per number of transported persons, max persons transported, ...
 // ToDo: Manage elevator capacity
-// ToDo: On landings, last arrived person is 1st on the list, so 1st to enter in the elevator, that should not be the case
-//       The pb is that 1st person entering may change cabin direction from NoDirection to Up or Down
 // ToDo: Manage more than 1 elevator
 
 // Runs the simulation
@@ -19,11 +16,11 @@ printfn "Elevator simulation in F#\n"
 
 // Create DataBag
 let b =
-    { DataBag.levels = 6
+    { DataBag.levels = 10
       numberOfCabins = 1
-      personsToCarry = 50
-      arrivalLength = 600
-      randomSeed = 1 }
+      personsToCarry = 100
+      arrivalLength = 12000
+      randomSeed = 2 }
 
 printfn "Simulation parameters:"
 printfn $"  {b.personsToCarry} persons to carry arriving over {b.arrivalLength} seconds"
@@ -43,7 +40,8 @@ let rec processNextEvent (clk: Clock) eventCount =
 
     if comingEvents.IsEmpty then
         let (Clock iClk) = clk
-        printfn "\nEnd simulation clk: %d" iClk
+        if showLog then printfn ""
+        printfn "End simulation clk: %d" iClk
         persons.printFinalStats ()
         elevators.printFinalStats ()
         clk, eventCount

@@ -89,22 +89,24 @@ type Persons with
     member this.printFinalStats () =
         printfn "\nPerson stats"
 
-        printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
-        printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
+        if showIndividualPersonStats then
+            printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
+            printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
 
-        for p in this.TransportedPersons.OrderBy(fun p -> p.ArrivalTime) do
-            let (PersonId pid) = p.Id
-            let (Floor entryFloor) = p.EntryFloor
-            let (Floor exitFloor) = p.ExitFloor
-            let (Clock iArrival) = p.ArrivalTime
-            let (Clock iEntry) = p.EntryTime.Value
-            let (Clock iExit) = p.ExitTime.Value
+            for p in this.TransportedPersons.OrderBy(fun p -> p.ArrivalTime) do
+                let (PersonId pid) = p.Id
+                let (Floor entryFloor) = p.EntryFloor
+                let (Floor exitFloor) = p.ExitFloor
+                let (Clock iArrival) = p.ArrivalTime
+                let (Clock iEntry) = p.EntryTime.Value
+                let (Clock iExit) = p.ExitTime.Value
 
-            let waitForElevator = iEntry - iArrival
-            let totalTransportTime = iExit - iArrival
+                let waitForElevator = iEntry - iArrival
+                let totalTransportTime = iExit - iArrival
 
-            printfn
-                $"  {pid, 4}  {entryFloor, 7} {exitFloor, 7}  {iArrival, 8} {iEntry, 8} {iExit, 8}  {waitForElevator, 8} {totalTransportTime, 8}"
+                printfn
+                    $"  {pid, 4}  {entryFloor, 7} {exitFloor, 7}  {iArrival, 8} {iEntry, 8} {iExit, 8}  {waitForElevator, 8} {totalTransportTime, 8}"
+            printfn ""
 
         let ls = List.ofSeq this.TransportedPersons
 
@@ -122,7 +124,6 @@ type Persons with
         let maxTotalTransport =
             ls |> List.map (fun p -> p.totalTransportation ()) |> List.max
 
-        printfn ""
         printfn "  Average wait for elevator: %.1f" avgWaitForElevator
         printfn "  Average total transport:   %.1f" avgTotalTransport
         printfn "  Max wait for elevator:     %d" maxWaitForElevator

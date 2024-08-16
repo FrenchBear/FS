@@ -13,11 +13,12 @@ module Types
 let showLog = false
 let showEvents = false
 let showInitialPersons = false
+let showIndividualPersonStats = false
 
 let accelerationDuration = 2 // and deceleration duration
-let oneLevelFullSpeed = 3
+let oneLevelFullSpeed = 2
 let fullSpeedBeforeDecisionDuration = 1 // and after decision before deceleration
-let openingDoorsDuration = 3 // and closing doors duration; Include delay between motor off/opening and closed/motor on
+let openingDoorsDuration = 2 // and closing doors duration; Include delay between motor off/opening and closed/motor on
 let moveInDuration = 2 // and move out duration
 
 (*
@@ -154,9 +155,9 @@ type CabinStatistic =
     | StatCabinIdle
     | StatCabinBusy
 
-    | StatMotorOff
-    | StatMotorAccelerating
-    | StatMotorFullSpeed
+    | StatMotorOff of Floor
+    | StatMotorAccelerating of Floor
+    | StatMotorFullSpeed of Floor
     | StatMotorDecelerating
 
     | StatDoorsOpen
@@ -179,7 +180,9 @@ type RunningStatus =
       BusyTime: int
       IdleTime: int
 
+      PersonsInCabin: int
       MaxPersonsInCabin: int
+      LevelsCovered: int array
     }
 
 // ----------------------------------------

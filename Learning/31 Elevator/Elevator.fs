@@ -78,9 +78,10 @@ type Elevators with
             assert (cabin.Door = Closed)
             assert (cabin.Direction = NoDirection)
             assert (cabin.Cabin = Idle)
+            assert (cabin.Floor = Floor 0)
 
             this.recordStat clk 0 StatCabinIdle
-            this.recordStat clk 0 StatMotorOff
+            this.recordStat clk 0 (StatMotorOff(Floor 0))
             this.recordStat clk 0 StatDoorsClosed
             this.recordStat clk 0 (StatPersonsInCabin 0)
 
@@ -148,7 +149,7 @@ type Elevators with
                       CabinIndex = 0
                       Event = EndMovingFullSpeed }
                 else
-                    this.recordStat clk 0 StatMotorFullSpeed
+                    this.recordStat clk 0 (StatMotorFullSpeed nf.Value)
 
                     { ElevatorEvent.Clock = clk.addOffset oneLevelFullSpeed
                       CabinIndex = 0
@@ -178,7 +179,7 @@ type Elevators with
             assert (cabin.Direction <> NoDirection)
             assert (cabin.Cabin = Busy)
 
-            this.recordStat clk 0 StatMotorOff
+            this.recordStat clk 0 (StatMotorOff cabin.Floor)
 
             // Ok, we arrive at a floor with stop requested
             this.registerEvent
@@ -265,14 +266,14 @@ type Elevators with
                     | [] -> false // Nobody moved in
                     | p :: remainingPersons ->
 
-                        let personGoesInSaveDirectionAsCabin =
+                        let personGoesInSameDirectionAsCabin =
                             if cabin.Direction = NoDirection then
                                 true // If cabin has no direction, then let 1st person enter, it will decide on cabin direction
                             else
                                 (cabin.Direction = Up && p.ExitFloor > cabin.Floor)
                                 || (cabin.Direction = Down && p.ExitFloor < cabin.Floor)
 
-                        if (personGoesInSaveDirectionAsCabin) then
+                        if (personGoesInSameDirectionAsCabin) then
                             let updatedPerson = { p with EntryTime = Some clk }
                             cabin.setStopRequested p.ExitFloor
 
@@ -301,7 +302,8 @@ type Elevators with
                         else
                             processPersonGoingInSameDirectionAsCabin remainingPersons
 
-                processPersonGoingInSameDirectionAsCabin (this.Landings.getPersons cabin.Floor)
+                // Use List.rev to make sure that the person who arrived first on the landing enters first in the cabin
+                processPersonGoingInSameDirectionAsCabin (List.rev (this.Landings.getPersons cabin.Floor))
 
             let cabin = this.Cabins[0]
             assert (cabin.Motor = Off)
@@ -355,7 +357,7 @@ type Elevators with
                       CabinIndex = 0
                       Event = EndAcceleration }
 
-                this.recordStat clk 0 StatMotorAccelerating
+                this.recordStat clk 0 (StatMotorAccelerating cabin.Floor)
 
         Logging.logCabinUpdate clk this.B originalCabin this.Cabins[0]
 
@@ -396,7 +398,7 @@ type Elevators with
             else
                 cabin.setStopRequested entry
                 this.recordStat clk 0 StatCabinBusy
-                this.recordStat clk 0 StatMotorAccelerating
+                this.recordStat clk 0 (StatMotorAccelerating cabin.Floor)
 
                 this.Cabins[0] <-
                     { cabin with
@@ -430,7 +432,7 @@ type Elevators with
                           Event = EndOpeningDoors }
 
                 else
-                    assert (cabin.Door = Opening || cabin.Door=Open)
+                    assert (cabin.Door = Opening || cabin.Door = Open)
                     () // Just wait for the door to open
 
             else
@@ -466,19 +468,27 @@ type Elevators with
             | (clk: Clock, ce: CabinStatistic) :: tail ->
                 let newAcc =
                     match ce with
-                    | StatMotorOff ->
+                    | StatMotorOff fl ->
                         assert (clk = Clock 0 || acc.IsMotorOn = true)
+
+                        if clk > Clock 0 then
+                            acc.LevelsCovered[acc.PersonsInCabin] <- acc.LevelsCovered[acc.PersonsInCabin] + 1
+
 
                         { acc with
                             MotorOnTime = acc.MotorOnTime + (clk.minus acc.LastMotorOn)
                             IsMotorOn = false
                             LastMotorOff = clk }
 
-                    | StatMotorAccelerating ->
+                    | StatMotorAccelerating fl ->
                         { acc with
                             MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOff)
                             IsMotorOn = true
                             LastMotorOn = clk }
+
+                    | StatMotorFullSpeed fl ->
+                        acc.LevelsCovered[acc.PersonsInCabin] <- acc.LevelsCovered[acc.PersonsInCabin] + 1
+                        acc
 
                     | StatCabinIdle ->
                         assert (clk = Clock 0 || acc.IsActive = true)
@@ -497,7 +507,9 @@ type Elevators with
                             LastBusy = clk }
 
                     | StatPersonsInCabin np ->
-                        { acc with MaxPersonsInCabin = max acc.MaxPersonsInCabin np }
+                        { acc with
+                            MaxPersonsInCabin = max acc.MaxPersonsInCabin np
+                            PersonsInCabin = np }
 
                     | StatEndSimulation ->
                         assert (acc.IsMotorOn = false)
@@ -517,7 +529,7 @@ type Elevators with
               LastMotorOff = Clock 0
               IsMotorOn = false
               MotorOnTime = 0
-              MotorOffTime = 0 
+              MotorOffTime = 0
 
               LastBusy = Clock 0
               LastIdle = Clock 0
@@ -525,12 +537,14 @@ type Elevators with
               BusyTime = 0
               IdleTime = 0
 
+              PersonsInCabin = 0
               MaxPersonsInCabin = 0
-            }
+              LevelsCovered = Array.create 50 0 }       // 50 is temp value until capacity is managed
 
         let final = cumulate elsl start
         assert (duration = final.MotorOnTime + final.MotorOffTime)
         assert (duration = final.BusyTime + final.IdleTime)
+        assert (final.PersonsInCabin = 0)
 
         printfn "  Simulation duration:     %d" duration
 
@@ -547,11 +561,22 @@ type Elevators with
         printfn
             "  Cabin busy during        %d = %.1f%% of simulation"
             final.BusyTime
-            (100.0 * double final.BusyTime/ double duration)
+            (100.0 * double final.BusyTime / double duration)
 
         printfn
             "  Cabin idle during        %d = %.1f%% of simulation"
             final.IdleTime
             (100.0 * double final.IdleTime / double duration)
 
-        printfn "  Max persons in cabin     %d" final.MaxPersonsInCabin
+        printfn "  Max persons in cabin:    %d" final.MaxPersonsInCabin
+
+        let totalFloorsTraveled = Array.sum final.LevelsCovered
+        printfn "  Total levels traveled:   %d" totalFloorsTraveled
+
+        for i in 0 .. final.MaxPersonsInCabin do
+            if final.LevelsCovered[i] > 0 then
+                printfn
+                    "    Levels traveled with %d person(s) in cabin: %d = %.1f%% of total"
+                    i
+                    final.LevelsCovered[i]
+                    (100.0 * double final.LevelsCovered[i] / double totalFloorsTraveled)
