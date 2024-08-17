@@ -2,6 +2,7 @@
 // Elevator simulation in F#
 //
 // 2014-08-15   PV
+// 2014-08-17   PV      Use my own UniformUntRandom to get comparable results in other non .Net languages
 
 
 [<AutoOpen>]
@@ -21,25 +22,25 @@ type PersonsActor with
             match b.SimulationPersons with
             | SimulationPersonsArray pa -> pa
             | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) ->
-                let rndPersons = new System.Random(randomSeed)
+                let rndPersons = UniformUntRandom.createNew randomSeed
 
                 let rec getRandomPerson () =
                     let entry, exit =
                         match algorithm with
                         | Ground50Levels50 ->
-                            if rndPersons.Next(2) = 0 then
-                                Floor 0, Floor(rndPersons.Next(1, b.SimulationElevators.Levels))
+                            if rndPersons.randInt 0 1 = 0 then
+                                Floor 0, Floor(rndPersons.randInt 1 (b.SimulationElevators.Levels-1))
                             else
-                                Floor(rndPersons.Next(1, b.SimulationElevators.Levels)), Floor 0
+                                Floor(rndPersons.randInt 1 (b.SimulationElevators.Levels-1)), Floor 0
 
                         | FullRandom ->
-                            Floor(rndPersons.Next(1, b.SimulationElevators.Levels)),
-                            Floor(rndPersons.Next(1, b.SimulationElevators.Levels))
+                            Floor(rndPersons.randInt 0 (b.SimulationElevators.Levels-1)),
+                            Floor(rndPersons.randInt 0 (b.SimulationElevators.Levels-1))
 
                     if entry = exit then
                         getRandomPerson ()
                     else
-                        let arrival = Clock(rndPersons.Next(arrivalLength))
+                        let arrival = Clock(rndPersons.randInt 0 (arrivalLength-1))
 
                         { Id = PersonId 0
                           EntryFloor = entry
@@ -146,7 +147,7 @@ type PersonsActor with
           MaxTotalTransport = maxTotalTransport }
 
     static member printPersonStats ps =
-        printfn "Person stats"
+        printfn "\nPerson stats"
         printfn "  Average wait for elevator: %.1f" ps.AvgWaitForElevator
         printfn "  Average total transport:   %.1f" ps.AvgTotalTransport
         printfn "  Max wait for elevator:     %d" ps.MaxWaitForElevator

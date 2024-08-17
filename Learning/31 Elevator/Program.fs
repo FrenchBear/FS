@@ -1,114 +1,85 @@
 ﻿// 31 Elevator
 // Learning F#, Elevator simulation
+// Main module, simulations tests and examples
 //
 // 2024-08-13   PV      First version, only 1 cabin
 
 // "Main" module, Run the simulation
 // In charge of master clock progression
 
-
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
 
-// Find next event in line, process it, and iterates until there are no more events to process
-let runSimulation (b: DataBag) =
-    let elevatorsActor = ElevatorsActor.createNew b
-    let personsActor = PersonsActor.createNew b elevatorsActor
-    elevatorsActor.Persons <- Some personsActor
+let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
 
-    printfn ""
+    let tenPersonsArrivingAtTimeZero = [|
+        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 2; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 3; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 4; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 5; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 6; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 7; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 8; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 9; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 10; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+    |]
 
-    let rec processNextEvent (clk: Clock) eventCount =
-        let comingEvents =
-            [ (elevatorsActor.getNextElevatorEventClock (), 0)
-              (personsActor.getNextPersonEventClock (), 1) ]
-            |> List.filter (fun (optClk, _) -> optClk.IsSome)
+    // Create DataBag
+    let b =
+        { SimulationElevators =
+            { Levels = 6
+              NumberOfCabins = 1
+              Capacity = 6 }
+          SimulationPersons = SimulationPersonsArray tenPersonsArrivingAtTimeZero }
 
-        if comingEvents.IsEmpty then
-            let (Clock iClk) = clk
+    let res = runSimulation b
 
-            if showLog then
-                printfn "\nEnd simulation clk: %d\n" iClk
+    assert (res.ElevatorsStats.LevelsCovered[6] = 3) // First elevator move over 3 levels (floor 0->3) with full capacity, 6 persons
+    assert (res.ElevatorsStats.LevelsCovered[0] = 3) // Then three levels again with an empty cabin, to go back floor 3->0 to take remaining persons
+    assert (res.ElevatorsStats.LevelsCovered[4] = 3) // Final travel over 3 levels too, with 4 remaining persons
 
-            if showDetailedPersonStats then
-                personsActor.printDetailedPersonStats ()
+    //PersonsActor.printPersonStats res.PersonsStats
+    //ElevatorsActor.printElevatorStats res.ElevatorsStats
+    //printSimulationStats res.SimulationStats
 
-            let ps = personsActor.getPersonStats ()
-            let es = elevatorsActor.getElevatorsStats ()
-            clk, eventCount, ps, es
-        else
-            let minClk = (fst (List.minBy (fun (optClk, _) -> optClk) comingEvents)).Value
-
-            let nextEvents =
-                comingEvents
-                |> List.filter (fun (opt, _) -> opt = Some(minClk))
-                |> List.sortBy (fun (_, pri) -> pri)
-
-            for (_, pri) in nextEvents do
-                match pri with
-                | 0 -> elevatorsActor.processEvent minClk
-                | _ -> personsActor.processEvent minClk
-
-            processNextEvent minClk (eventCount + List.length nextEvents)
-
-    let sw = System.Diagnostics.Stopwatch.StartNew()
-    let (Clock iClk), eventCount, ps, es = processNextEvent (Clock 0) 0
-    sw.Stop()
-
-    let ss =
-        { SimulationDuration = iClk
-          SimulationRealTimeDuration = float (sw.ElapsedMilliseconds) / 1000.0
-          SimulationEventsCount = eventCount }
-
-    // Returns a SimulationResult
-    { SimulationStats = ss
-      ElevatorsStats = es
-      PersonsStats = ps }
-
-let printSimulationParameters b =
-    printfn "Simulation parameters"
-    printfn "  Persons"
-
-    match b.SimulationPersons with
-    | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) ->
-        printfn "    Random persons to carry: %d, Algorithm: %A, Seed: %d" personsToCarry algorithm randomSeed
-        printfn "    Arrival duration:        %d" arrivalLength
-    | SimulationPersonsArray ap -> printfn "    Fixed persons to carry:  %d" (Array.length ap)
-
-    printfn "  Elevators/Building"
-    printfn "    Levels:                  %d" b.SimulationElevators.Levels
-    printfn "    Number of cabins:        %d" b.SimulationElevators.NumberOfCabins
-    printfn "    Capacity of a cabin:     %d" b.SimulationElevators.Capacity
-
-let printSimulationStats ss =
-    printfn "\nSimulation stats"
-    printfn $"  Simulation duration:       {ss.SimulationDuration}"
-    printfn $"  Real time duration:        {ss.SimulationRealTimeDuration:F3}s"
-    printfn $"  Events processed:          {ss.SimulationEventsCount}"
+// testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 
 
-// Array of specific persons list, no random generation in this case
-let tenPersonsArrivingAtTimeZero = [|
-    { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-    { Id = PersonId 2; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-    { Id = PersonId 3; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-    { Id = PersonId 4; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-    { Id = PersonId 5; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-    { Id = PersonId 6; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-    { Id = PersonId 7; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-    { Id = PersonId 8; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-    { Id = PersonId 9; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-    { Id = PersonId 10; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-|]
+let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
+
+    // Person 2 arrives just when the door is about to close
+    // Check that person events are processed before elevator events, so both persons are transported together
+    let personsData = [|
+        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 2; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 4; EntryTime = None; ExitTime = None }
+    |]
+
+    let b =
+        { SimulationElevators =
+            { Levels = 6
+              NumberOfCabins = 1
+              Capacity = 6 }
+          SimulationPersons = SimulationPersonsArray personsData }
+
+    let res = runSimulation b
+
+    assert (res.ElevatorsStats.LevelsCovered[2] = 3) // Make sure that the two persons traveled together on 3 levels
+
+    //PersonsActor.printPersonStats res.PersonsStats
+    //ElevatorsActor.printElevatorStats res.ElevatorsStats
+    //printSimulationStats res.SimulationStats
+
+// testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+
+
 
 // Create DataBag
 let b =
     { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
-      //SimulationPersons = SimulationPersonsArray tenPersonsArrivingAtTimeZero
-      SimulationPersons = SimulationRandomGeneration(50, 600, 1, Ground50Levels50) }
-      //SimulationPersons = SimulationRandomGeneration(4, 60, 1, FullRandom) }
-
+      SimulationPersons = SimulationRandomGeneration(50, 800, 1, Ground50Levels50) 
+    }
 
 printSimulationParameters b
 let res = runSimulation b

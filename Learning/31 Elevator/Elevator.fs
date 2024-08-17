@@ -566,22 +566,22 @@ type ElevatorsActor with
         printfn "  Simulation duration:       %d" es.SimulationDuration
 
         printfn
-            "  Motor on during            %d = %.1f%% of simulation"
+            "  Motor on time:             %d = %.1f%% of simulation"
             es.MotorOnTime
             (100.0 * double es.MotorOnTime / double es.SimulationDuration)
 
         printfn
-            "  Motor off during           %d = %.1f%% of simulation"
+            "  Motor off time:            %d = %.1f%% of simulation"
             es.MotorOffTime
             (100.0 * double es.MotorOffTime / double es.SimulationDuration)
 
         printfn
-            "  Cabin busy during          %d = %.1f%% of simulation"
+            "  Cabin busy time:           %d = %.1f%% of simulation"
             es.CabinBusyTime
             (100.0 * double es.CabinBusyTime / double es.SimulationDuration)
 
         printfn
-            "  Cabin idle during          %d = %.1f%% of simulation"
+            "  Cabin idle time:           %d = %.1f%% of simulation"
             es.CabinIdleTime
             (100.0 * double es.CabinIdleTime / double es.SimulationDuration)
 
