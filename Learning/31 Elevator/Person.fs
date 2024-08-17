@@ -59,7 +59,7 @@ type PersonsActor with
                        { tempPersonsArray[i] with
                            Id = PersonId(i + 1) } |]
 
-        if showInitialPersons then
+        if b.LogDetails.showInitialPersons then
             printfn "\nPersons for the simulation"
 
             for p in personsArray do
@@ -86,21 +86,21 @@ type PersonsActor with
     member this.processEvent clk =
         let evt = this.PersonEventsQueue.Dequeue()
 
-        if showEvents then
-            Logging.logMessage evt.Clock $"Person evt: {evt}"
+        if this.B.LogDetails.showEvents then
+            Logging.logMessage this.B evt.Clock $"Person evt: {evt}"
 
         assert (clk = evt.Clock)
 
         match evt.Event with
         | Arrival ->
-            Logging.logPersonArrival clk evt.Person
+            Logging.logPersonArrival this.B clk evt.Person
             let prevList = this.Elevators.Landings.getPersons evt.Person.EntryFloor
             this.Elevators.Landings.setPersons evt.Person.EntryFloor (evt.Person :: prevList)
             this.Elevators.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
 
         | ExitCabin ->
             this.TransportedPersons.Add(evt.Person)
-            Logging.logPersonExit clk evt.Person
+            Logging.logPersonExit this.B clk evt.Person
 
 
     member this.printDetailedPersonStats() =

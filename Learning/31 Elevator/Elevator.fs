@@ -64,15 +64,15 @@ type ElevatorsActor with
         let evt = this.ElevatorEventsQueue.Dequeue()
         assert (clk = evt.Clock)
 
-        if showEvents then
-            Logging.logMessage evt.Clock $"Elevator evt: {evt}, cabin: {this.Cabins[0]}"
+        if this.B.LogDetails.showEvents then
+            logMessage this.B evt.Clock $"Elevator evt: {evt}, cabin: {this.Cabins[0]}"
 
         // Keep a deep copy for final logging
         let originalCabin = this.Cabins[0].deepCopy ()
 
         match evt.Event with
         | ElevatorOn ->
-            Logging.logMessage clk "Elevator On and ready"
+            Logging.logMessage this.B clk "Elevator On and ready"
             let cabin = this.Cabins[0]
             assert (cabin.Motor = Off)
             assert (cabin.Door = Closed)
@@ -93,7 +93,7 @@ type ElevatorsActor with
             assert (cabin.Cabin = Busy)
 
             this.registerEvent
-                { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration
+                { ElevatorEvent.Clock = clk.addOffset this.B.Durations.fullSpeedBeforeDecisionDuration
                   CabinIndex = 0
                   Event = Decision }
 
@@ -145,13 +145,13 @@ type ElevatorsActor with
                             checkPersonGoingInCabinDirection ll
 
                 if cabin.getStopRequested this.Cabins[0].Floor || landingStopRequest then
-                    { ElevatorEvent.Clock = clk.addOffset fullSpeedBeforeDecisionDuration
+                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.fullSpeedBeforeDecisionDuration
                       CabinIndex = 0
                       Event = EndMovingFullSpeed }
                 else
                     this.recordStat clk 0 (StatMotorFullSpeed nf.Value)
 
-                    { ElevatorEvent.Clock = clk.addOffset oneLevelFullSpeed
+                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.oneLevelFullSpeed
                       CabinIndex = 0
                       Event = Decision }
 
@@ -165,7 +165,7 @@ type ElevatorsActor with
             assert (cabin.Cabin = Busy)
 
             this.registerEvent
-                { ElevatorEvent.Clock = clk.addOffset accelerationDuration
+                { ElevatorEvent.Clock = clk.addOffset this.B.Durations.accelerationDuration
                   CabinIndex = 0
                   Event = EndDeceleration }
 
@@ -183,7 +183,7 @@ type ElevatorsActor with
 
             // Ok, we arrive at a floor with stop requested
             this.registerEvent
-                { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration
+                { ElevatorEvent.Clock = clk.addOffset this.B.Durations.openingDoorsDuration
                   CabinIndex = 0
                   Event = EndOpeningDoors }
 
@@ -240,16 +240,16 @@ type ElevatorsActor with
 
                     // Elevator event to continue with next person moving out or in the elevator at current floor
                     this.registerEvent
-                        { ElevatorEvent.Clock = clk.addOffset moveInDuration
+                        { ElevatorEvent.Clock = clk.addOffset this.B.Durations.moveInDuration
                           CabinIndex = 0
                           Event = EndOpeningDoors }
 
                     // Person event to record cabin exit for final stats
                     let evt2 =
-                        { PersonEvent.Clock = clk.addOffset moveInDuration
+                        { PersonEvent.Clock = clk.addOffset this.B.Durations.moveInDuration
                           Person =
                             { p with
-                                ExitTime = Some(clk.addOffset moveInDuration) }
+                                ExitTime = Some(clk.addOffset this.B.Durations.moveInDuration) }
                           Event = ExitCabin }
 
                     this.Persons.Value.PersonEventsQueue.Enqueue(evt2, evt2.Clock)
@@ -295,7 +295,7 @@ type ElevatorsActor with
 
                                 // Elevator event to continue with next person moving out or in the elevator at current floor
                                 this.registerEvent
-                                    { ElevatorEvent.Clock = clk.addOffset moveInDuration
+                                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.moveInDuration
                                       CabinIndex = 0
                                       Event = EndOpeningDoors }
 
@@ -325,7 +325,7 @@ type ElevatorsActor with
                     this.recordStat clk 0 (StatPersonsInCabin(List.length this.Cabins[0].Persons))
 
                     this.registerEvent
-                        { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration
+                        { ElevatorEvent.Clock = clk.addOffset this.B.Durations.openingDoorsDuration
                           CabinIndex = 0
                           Event = EndClosingDoors }
 
@@ -356,7 +356,7 @@ type ElevatorsActor with
                         Motor = Accelerating }
 
                 this.registerEvent
-                    { ElevatorEvent.Clock = clk.addOffset accelerationDuration
+                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.accelerationDuration
                       CabinIndex = 0
                       Event = EndAcceleration }
 
@@ -368,7 +368,7 @@ type ElevatorsActor with
     member this.callElevator (clk: Clock) (entry: Floor) (exit: Floor) =
         assert (exit <> entry)
 
-        if showEvents then
+        if this.B.LogDetails.showEvents then
             printfn "\nCalling elevator from level %A to go to level %A" entry exit
 
         // Keep a deep copy for final logging
@@ -393,7 +393,7 @@ type ElevatorsActor with
                         Door = Opening }
 
                 this.registerEvent
-                    { ElevatorEvent.Clock = clk.addOffset openingDoorsDuration
+                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.openingDoorsDuration
                       CabinIndex = 0
                       Event = EndOpeningDoors }
 
@@ -410,7 +410,7 @@ type ElevatorsActor with
                         Direction = if (entry > cabin.Floor) then Up else Down }
 
                 this.registerEvent
-                    { ElevatorEvent.Clock = clk.addOffset accelerationDuration
+                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.accelerationDuration
                       CabinIndex = 0
                       Event = EndAcceleration }
 
@@ -430,7 +430,7 @@ type ElevatorsActor with
 
                     // And we register a new EndOpeningDoors event for the cabin
                     this.registerEvent
-                        { ElevatorEvent.Clock = clk.addOffset (openingDoorsDuration - remainigTime)
+                        { ElevatorEvent.Clock = clk.addOffset (this.B.Durations.openingDoorsDuration - remainigTime)
                           CabinIndex = 0
                           Event = EndOpeningDoors }
 
@@ -459,7 +459,7 @@ type ElevatorsActor with
         let (Clock duration) = clk
         let elsl = List.rev this.Statistics[0]
 
-        if showDetailedElevatorStatRecordss then
+        if this.B.LogDetails.showDetailedElevatorStatRecordss then
             for clk, ce in elsl do
                 let (Clock iClk) = clk
                 printf $"clk: {iClk, 4}  "

@@ -6,8 +6,8 @@
 [<AutoOpen>]
 module Logging
 
-let logMessage clk msg =
-    if showLog then
+let logMessage b clk msg =
+    if b.LogDetails.showLog then
         let (Clock iClk) = clk
         printfn $"clk: {iClk, 4}  {msg}"
 
@@ -63,15 +63,15 @@ let logCabinUpdate clk b before after =
         lst.Add(System.String.Join(", ", lstPersons))
 
     if not (lst.Count = 0) then
-        logMessage clk (System.String.Join(", ", lst))
+        logMessage b clk (System.String.Join(", ", lst))
 
-let logPersonArrival clk p =
+let logPersonArrival b clk p =
     let (PersonId person) = p.Id
     let (Floor entry) = p.EntryFloor
     let (Floor exit) = p.ExitFloor
-    logMessage clk $"Person {person} Arrival Floor {entry}→Floor {exit}"
+    logMessage b clk $"Person {person} Arrival Floor {entry}→Floor {exit}"
 
-let logPersonExit clk p =
+let logPersonExit b clk p =
     let (PersonId pid) = p.Id
     let (Clock arrivalIClk) = p.ArrivalTime
     let (Floor entry) = p.EntryFloor
@@ -81,7 +81,6 @@ let logPersonExit clk p =
     let (Clock exitIClk) = p.ExitTime.Value
     let totalTransportationTime = exitIClk - arrivalIClk
 
-    logMessage
-        clk
+    logMessage b clk
         $"Person {pid} Exit, Arrival Floor {entry}@{arrivalIClk}, Waited {waitingCabin}, Entered@{entryIClk}, Exit Floor {exit}@{exitIClk}, Total {totalTransportationTime}"
 

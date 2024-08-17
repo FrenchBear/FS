@@ -10,17 +10,33 @@ module Types
 // ----------------------------------------------------------------------------
 // Simulation parameters
 
-let showLog = false
-let showEvents = false
-let showInitialPersons = false
-let showDetailedPersonStats = false
-let showDetailedElevatorStatRecordss = false
+type LogDetails =
+    { showLog: bool
+      showEvents: bool
+      showInitialPersons: bool
+      showDetailedPersonStats: bool
+      showDetailedElevatorStatRecordss: bool }
 
-let accelerationDuration = 2 // and deceleration duration
-let oneLevelFullSpeed = 2
-let fullSpeedBeforeDecisionDuration = 1 // and after decision before deceleration
-let openingDoorsDuration = 2 // and closing doors duration; Include delay between motor off/opening and closed/motor on
-let moveInDuration = 2 // and move out duration
+type Durations =
+    { accelerationDuration: int // and deceleration duration
+      oneLevelFullSpeed: int
+      fullSpeedBeforeDecisionDuration: int // and after decision before deceleration
+      openingDoorsDuration: int // and closing doors duration; Include delay between motor off/opening and closed/motor on
+      moveInDuration: int } // and move out duration
+
+let standardLogDetails =
+    { showLog = false
+      showEvents = false
+      showInitialPersons = false
+      showDetailedPersonStats = false
+      showDetailedElevatorStatRecordss = false }
+
+let standardDurations =
+    { accelerationDuration = 2
+      oneLevelFullSpeed = 2
+      fullSpeedBeforeDecisionDuration = 1
+      openingDoorsDuration = 2
+      moveInDuration = 2 }
 
 (*
     One level with acceleration, decision, and deceleration: 6s
@@ -243,7 +259,9 @@ type SimulationPersons =
 
 type DataBag =
     { SimulationElevators: SimulationElevators
-      SimulationPersons: SimulationPersons }
+      SimulationPersons: SimulationPersons
+      LogDetails: LogDetails
+      Durations: Durations }
 
 
 // ----------------------------------------
