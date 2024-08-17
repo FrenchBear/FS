@@ -402,7 +402,6 @@ type ElevatorsActor with
 
             // Otherwise we start accelerating
             else
-                cabin.setStopRequested entry
                 this.recordStat clk 0 StatCabinBusy
                 this.recordStat clk 0 (StatMotorAccelerating cabin.Floor)
 
@@ -444,8 +443,6 @@ type ElevatorsActor with
             else
                 // Cabin must move up or down, so we set direction and wait for the doors to close,
                 // once the doors are closed, motor will turn on and start accelerating
-                cabin.setStopRequested entry
-
                 this.Cabins[0] <-
                     { cabin with
                         Direction = if (entry > cabin.Floor) then Up else Down }

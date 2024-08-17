@@ -147,6 +147,7 @@ type Cabin =
         let (Floor f) = floor
         this._StopRequested[f]
 
+    // StopRequested is only for people inside cabin
     member this.setStopRequested floor =
         let (Floor f) = floor
         this._StopRequested[f] <- true

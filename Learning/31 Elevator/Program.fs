@@ -47,7 +47,7 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
     //printSimulationStats res.SimulationStats
 
-// testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
+testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 
 
 let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
@@ -77,14 +77,14 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
     //printSimulationStats res.SimulationStats
 
-// testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 
 
 
 // Create DataBag
 let b =
     { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
-      SimulationPersons = SimulationRandomGeneration(50, 800, 1, Ground50Levels50) 
+      SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
       LogDetails = standardLogDetails
       Durations = standardDurations
     }
