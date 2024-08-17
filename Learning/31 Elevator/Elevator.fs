@@ -226,6 +226,8 @@ type ElevatorsActor with
                     Motor = Off }
 
         | EndOpeningDoors ->
+            let doorsJustOpening = this.Cabins[0].Door = Opening
+
             let allowMoveOut () =
                 // If there's still in the cabin a person that needs to get out, then give it 3 seconds to move out
                 let cabin = this.Cabins[0]
@@ -263,6 +265,7 @@ type ElevatorsActor with
 
                 let rec processPersonGoingInSameDirectionAsCabin lst =
                     if List.length cabin.Persons = cabin.Capacity then
+                        if doorsJustOpening then this.recordStat clk 0 StatUselessStop
                         false
                     else
                         match lst with
@@ -523,6 +526,9 @@ type ElevatorsActor with
                             CabinIdleTime = acc.CabinIdleTime + (clk.minus acc.LastCabinIdle)
                             LastMotorOff = clk }
 
+                    | StatUselessStop ->
+                        { acc with UselessStops=acc.UselessStops+1 }
+
                     | _ -> acc
 
                 cumulate tail newAcc
@@ -540,6 +546,7 @@ type ElevatorsActor with
               CabinBusyTime = 0
               CabinIdleTime = 0
 
+              UselessStops = 0
               PersonsInCabin = 0
               MaxPersonsInCabin = 0
               LevelsCovered = Array.create (this.Cabins[0].Capacity+1) 0 }
@@ -555,7 +562,7 @@ type ElevatorsActor with
           MotorOffTime = final.MotorOffTime
           CabinBusyTime = final.CabinBusyTime
           CabinIdleTime = final.CabinIdleTime
-
+          UselessStops = final.UselessStops
           MaxPersonsInCabin = final.MaxPersonsInCabin
           TotalFloorsTraveled = Array.sum final.LevelsCovered
           LevelsCovered = final.LevelsCovered }
@@ -586,6 +593,7 @@ type ElevatorsActor with
             (100.0 * double es.CabinIdleTime / double es.SimulationDuration)
 
         printfn "  Max persons in cabin:      %d" es.MaxPersonsInCabin
+        printfn "  Useless stops:             %d" es.UselessStops
 
         printfn "  Total levels traveled:     %d" es.TotalFloorsTraveled
 

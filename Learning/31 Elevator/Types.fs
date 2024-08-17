@@ -164,17 +164,14 @@ type Cabin =
 type CabinStatistic =
     | StatCabinIdle
     | StatCabinBusy
-
     | StatMotorOff of Floor
     | StatMotorAccelerating of Floor
     | StatMotorFullSpeed of Floor
     | StatMotorDecelerating
-
     | StatDoorsOpen
     | StatDoorsClosed
-
+    | StatUselessStop
     | StatPersonsInCabin of int
-
     | StatEndSimulation
 
 type RunningStatus =
@@ -190,6 +187,7 @@ type RunningStatus =
       CabinBusyTime: int
       CabinIdleTime: int
 
+      UselessStops: int
       PersonsInCabin: int
       MaxPersonsInCabin: int
       LevelsCovered: int array }
@@ -304,7 +302,7 @@ type ElevatorsStats =
       MotorOffTime: int
       CabinBusyTime: int
       CabinIdleTime: int
-
+      UselessStops: int
       MaxPersonsInCabin: int
       TotalFloorsTraveled: int
       LevelsCovered: int array }
