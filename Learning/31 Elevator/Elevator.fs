@@ -34,7 +34,6 @@ type ElevatorsActor with
 
         newElevator
 
-
     member this.getNextElevatorEventClock() =
         if this.ElevatorEventsQueue.Count = 0 then
             None

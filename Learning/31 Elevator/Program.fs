@@ -47,7 +47,7 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
     //printSimulationStats res.SimulationStats
 
-testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
+//testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 
 
 let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
@@ -77,22 +77,45 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
     //printSimulationStats res.SimulationStats
 
-testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+//testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 
 
 
-// Create DataBag
-let b =
-    { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
-      SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
-      LogDetails = standardLogDetails
-      Durations = standardDurations
-    }
+// Just a random simulation
+let testARandomSimulation () =
+    let b =
+        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+          SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
+          LogDetails = standardLogDetails
+          Durations = standardDurations
+        }
 
-printSimulationParameters b
-let res = runSimulation b
-PersonsActor.printPersonStats res.PersonsStats
-ElevatorsActor.printElevatorStats res.ElevatorsStats
-printSimulationStats res.SimulationStats
+    printSimulationParameters b
+    let res = runSimulation b
+    PersonsActor.printPersonStats res.PersonsStats
+    ElevatorsActor.printElevatorStats res.ElevatorsStats
+    printSimulationStats res.SimulationStats
+
+//testARandomSimulation ()
+
+
+let testContinuousSimulation () =
+    let refDataBag =
+        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+          SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
+          LogDetails = standardLogDetails
+          Durations = standardDurations
+        }
+
+    printfn "Continuous random simulation of variable number of persons over 800s"
+    for np in 5..5..120 do
+        let b = {refDataBag with SimulationPersons = SimulationRandomGeneration(np, 800, 1, Ground50Levels50) }
+        let res = runSimulation b
+
+        printf "p=%3d: wait = %5.1f " np res.PersonsStats.AvgWaitForElevator
+        let s = int(res.PersonsStats.AvgWaitForElevator/350.0*80.0+0.5)
+        printfn "%*c" s '*'
+
+testContinuousSimulation ()
 
 printfn "\nDone."
