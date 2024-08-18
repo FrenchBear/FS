@@ -20,45 +20,52 @@ let runSimulation (b: DataBag) =
         printfn ""
 
     let rec processNextEvent (clk: Clock) eventCount =
-        // Special case, first elevator event ElevatorOn (check initialization and record stating values in statistics) is always processed first
-        if eventCount = 0 then
-            elevatorsActor.processEvent (Clock 0)
-            processNextEvent clk 1
+        let hasItem,_,nextClk = b.EventsQueue.TryPeek()
+
+        if not hasItem
+        then
+            let (Clock iClk) = clk
+
+            if b.LogDetails.showLog then
+                printfn "\nEnd simulation clk: %d\n" iClk
+
+            if b.LogDetails.showDetailedPersonStats then
+                personsActor.printDetailedPersonStats ()
+
+            let ps = personsActor.getPersonStats ()
+            let es = elevatorsActor.getElevatorsStats ()
+            let tp = personsActor.getTransportedPersons ()
+            clk, eventCount, ps, es, tp
+
         else
-            let comingEvents =
-                [ (personsActor.getNextPersonEventClock (), 0) // Person arrivals are processed before elevator events of the same clock
-                  (elevatorsActor.getNextElevatorEventClock (), 1) ]
-                |> List.filter (fun (optClk, _) -> optClk.IsSome)
+            let rec getComingEventsList lst =
+                let hasItem,_,clkPeek = b.EventsQueue.TryPeek()
+                if (not hasItem) || clkPeek>nextClk
+                then lst
+                else
+                    let nextEvent = b.EventsQueue.Dequeue()
+                    let nep =
+                        match nextEvent with
+                        | PersonEvent pe -> nextEvent, 0
+                        | ElevatorEvent ee -> nextEvent, 1
+                    getComingEventsList (nep::lst)
+                        
+            let nextEvents = (getComingEventsList []) |> List.sortBy (fun (_, pri) -> pri)
 
-            if comingEvents.IsEmpty then
-                let (Clock iClk) = clk
+            for (evt, _) in nextEvents do
+                match evt with
+                | PersonEvent pe -> 
+                    assert (pe.Clock=nextClk)
+                    personsActor.processEvent nextClk pe
+                | ElevatorEvent ee -> 
+                    assert (ee.Clock=nextClk)
+                    elevatorsActor.processEvent nextClk ee
 
-                if b.LogDetails.showLog then
-                    printfn "\nEnd simulation clk: %d\n" iClk
-
-                if b.LogDetails.showDetailedPersonStats then
-                    personsActor.printDetailedPersonStats ()
-
-                let ps = personsActor.getPersonStats ()
-                let es = elevatorsActor.getElevatorsStats ()
-                clk, eventCount, ps, es
-            else
-                let minClk = (fst (List.minBy (fun (optClk, _) -> optClk) comingEvents)).Value
-
-                let nextEvents =
-                    comingEvents
-                    |> List.filter (fun (opt, _) -> opt = Some(minClk))
-                    |> List.sortBy (fun (_, pri) -> pri)
-
-                for (_, priority) in nextEvents do
-                    match priority with
-                    | 0 -> personsActor.processEvent minClk
-                    | _ -> elevatorsActor.processEvent minClk
-
-                processNextEvent minClk (eventCount + List.length nextEvents)
+            processNextEvent nextClk (eventCount + List.length nextEvents)
 
     let sw = System.Diagnostics.Stopwatch.StartNew()
-    let (Clock iClk), eventCount, ps, es = processNextEvent (Clock 0) 0
+    elevatorsActor.initialize ()
+    let (Clock iClk), eventCount, ps, es, tp = processNextEvent (Clock 0) 0
     sw.Stop()
 
     let ss =
@@ -69,7 +76,8 @@ let runSimulation (b: DataBag) =
     // Returns a SimulationResult
     { SimulationStats = ss
       ElevatorsStats = es
-      PersonsStats = ps }
+      PersonsStats = ps
+      TransportedPersons = tp }
 
 let printSimulationParameters b =
     printfn "Simulation parameters"

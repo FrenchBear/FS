@@ -14,7 +14,7 @@ type PersonsActor with
     static member createNew b elevators =
         let newPersons =
             { B = b
-              PersonEventsQueue = new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
+              //PersonEventsQueue = new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
               TransportedPersons = new System.Collections.Generic.List<Person>()
               Elevators = elevators }
 
@@ -73,20 +73,20 @@ type PersonsActor with
                   CreatedOn = p.ArrivalTime
                 }
 
-            newPersons.PersonEventsQueue.Enqueue(evt, evt.Clock)
+            b.EventsQueue.Enqueue(PersonEvent evt, evt.Clock)
 
         newPersons
 
 
-    member this.getNextPersonEventClock() =
-        if this.PersonEventsQueue.Count = 0 then
-            None
-        else
-            let evt = this.PersonEventsQueue.Peek()
-            Some(evt.Clock)
+    //member this.getNextPersonEventClock() =
+    //    if this.B.EventsQueue.Count = 0 then
+    //        None
+    //    else
+    //        let evt = this.PersonEventsQueue.Peek()
+    //        Some(evt.Clock)
 
-    member this.processEvent clk =
-        let evt = this.PersonEventsQueue.Dequeue()
+    member this.processEvent clk (evt: PersonEvent) =
+        //let evt = this.PersonEventsQueue.Dequeue()
 
         if this.B.LogDetails.showEvents then
             Logging.logMessage this.B evt.Clock $"Person evt: {evt}"
@@ -103,6 +103,10 @@ type PersonsActor with
         | ExitCabin ->
             this.TransportedPersons.Add(evt.Person)
             Logging.logPersonExit this.B clk evt.Person
+
+
+    member this.getTransportedPersons () = 
+        this.TransportedPersons
 
 
     member this.printDetailedPersonStats() =

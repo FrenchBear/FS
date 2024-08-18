@@ -28,7 +28,8 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
 
     // Create DataBag
     let b =
-        { SimulationElevators =
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+          SimulationElevators =
             { Levels = 6
               NumberOfCabins = 1
               Capacity = 6 }
@@ -47,7 +48,7 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
     //printSimulationStats res.SimulationStats
 
-testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
+//testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 
 
 let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
@@ -60,7 +61,8 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     |]
 
     let b =
-        { SimulationElevators =
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+          SimulationElevators =
             { Levels = 6
               NumberOfCabins = 1
               Capacity = 6 }
@@ -77,14 +79,15 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
     //printSimulationStats res.SimulationStats
 
-testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+//testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 
 
 // Just a random simulation
 let testARandomSimulation () =
     let b =
-        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
-          SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+          SimulationPersons = SimulationRandomGeneration(100, 800, 1, Ground50Levels50) 
           LogDetails = standardLogDetails
           Durations = standardDurations
         }
@@ -95,12 +98,13 @@ let testARandomSimulation () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     printSimulationStats res.SimulationStats
 
-testARandomSimulation ()
+//testARandomSimulation ()
 
 
 let testContinuousSimulation () =
     let refDataBag =
-        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
           LogDetails = standardLogDetails
           Durations = standardDurations
@@ -115,6 +119,49 @@ let testContinuousSimulation () =
         let s = int(res.PersonsStats.AvgWaitForElevator/350.0*80.0+0.5)
         printfn "%*c" s '*'
 
-testContinuousSimulation ()
+//testContinuousSimulation ()
+
+
+let testDoorsClosingWhenAPersonArrives =
+    // Person 2 arrives just when the door is closing, and person 3 1s later
+    // Check that the closing door sequence is interrupted (ClosingDoors event is deleted) while both persons are maintained in the list
+    let personsData = [|
+        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 2; EntryFloor = Floor 3; ExitFloor = Floor 0; ArrivalTime = Clock 27; EntryTime = None; ExitTime = None }
+        { Id = PersonId 3; EntryFloor = Floor 3; ExitFloor = Floor 0; ArrivalTime = Clock 28; EntryTime = None; ExitTime = None }
+    |]
+
+    let b =
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+          SimulationElevators =
+            { Levels = 6
+              NumberOfCabins = 1
+              Capacity = 6 }
+          SimulationPersons = SimulationPersonsArray personsData 
+          LogDetails = { 
+              showLog = false
+              showEvents = false
+              showInitialPersons = false
+              showDetailedPersonStats = false
+              showDetailedElevatorStatRecordss = false }
+          Durations = { 
+              accelerationDuration = 2
+              oneLevelFullSpeed = 2
+              fullSpeedBeforeDecisionDuration = 1
+              openingDoorsDuration = 4                  // Need a long closing door for this test
+              moveInDuration = 2 }
+          }
+
+    let res = runSimulation b
+
+    assert (res.SimulationStats.SimulationDuration = 58)
+    let tp2 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 2)
+    let tp3 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 3)
+    assert (tp2.EntryTime = Some(Clock 28))
+    assert (tp3.EntryTime = Some(Clock 30))
+
+    PersonsActor.printPersonStats res.PersonsStats
+    ElevatorsActor.printElevatorStats res.ElevatorsStats
+    printSimulationStats res.SimulationStats
 
 printfn "\nDone."

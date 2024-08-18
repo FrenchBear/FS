@@ -171,6 +171,7 @@ type CabinStatistic =
     | StatMotorDecelerating
     | StatDoorsOpen
     | StatDoorsClosed
+    | StatClosingDoorsInterrupted
     | StatUselessStop
     | StatPersonsInCabin of int
     | StatEndSimulation
@@ -189,6 +190,7 @@ type RunningStatus =
       CabinIdleTime: int
 
       UselessStops: int
+      ClosingDoorsInterrupted: int
       PersonsInCabin: int
       MaxPersonsInCabin: int
       LevelsCovered: int array }
@@ -219,12 +221,10 @@ type PersonEvent =
     { Clock: Clock
       Event: PersonEventDetail
       Person: Person
-      CreatedOn: Clock
-    }
+      CreatedOn: Clock }
 
 
 type ElevatorEventDetail =
-    | ElevatorOn
     | EndAcceleration
     | EndDeceleration
     | EndMovingFullSpeed
@@ -236,13 +236,11 @@ type ElevatorEvent =
     { Clock: Clock
       CabinIndex: int
       Event: ElevatorEventDetail
-      CreatedOn: Clock
-    }
+      CreatedOn: Clock }
 
-// For a more general mechanism, there should be only 1 shared PriorityQueue of CommonEvent
-//type CommonEvent =
-//    | ElevatorEvent of ElevatorEvent
-//    | PersonEvent of PersonEvent
+type CommonEvent =
+    | ElevatorEvent of ElevatorEvent
+    | PersonEvent of PersonEvent
 
 // ----------------------------------------
 // Simulation data
@@ -265,7 +263,8 @@ type SimulationPersons =
         algorithm: RandomPersonsAlgorithm
 
 type DataBag =
-    { SimulationElevators: SimulationElevators
+    { EventsQueue: System.Collections.Generic.PriorityQueue<CommonEvent, Clock>
+      SimulationElevators: SimulationElevators
       SimulationPersons: SimulationPersons
       LogDetails: LogDetails
       Durations: Durations }
@@ -276,7 +275,6 @@ type DataBag =
 
 type ElevatorsActor =
     { B: DataBag
-      ElevatorEventsQueue: System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>
       Cabins: Cabin array
       Statistics: (Clock * CabinStatistic) list array
       Landings: Landings
@@ -288,7 +286,6 @@ and
 
     PersonsActor =
     { B: DataBag
-      PersonEventsQueue: System.Collections.Generic.PriorityQueue<PersonEvent, Clock>
       TransportedPersons: System.Collections.Generic.List<Person>
       Elevators: ElevatorsActor }
 
@@ -312,6 +309,7 @@ type ElevatorsStats =
       CabinBusyTime: int
       CabinIdleTime: int
       UselessStops: int
+      ClosingDoorsInterrupted: int
       MaxPersonsInCabin: int
       TotalFloorsTraveled: int
       LevelsCovered: int array }
@@ -324,4 +322,5 @@ type SimulationStats =
 type SimulationResult =
     { SimulationStats: SimulationStats
       ElevatorsStats: ElevatorsStats
-      PersonsStats: PersonsStats }
+      PersonsStats: PersonsStats
+      TransportedPersons: System.Collections.Generic.List<Person> }
