@@ -29,10 +29,13 @@ type ElevatorsActor with
               Persons = None }
 
         // Initial event, just to check that initial state is Ok
+        // DoDo, replace it with actor special start method
         newElevator.registerEvent
             { ElevatorEvent.Clock = Clock 0
               CabinIndex = 0
-              Event = ElevatorOn }
+              Event = ElevatorOn
+              CreatedOn = Clock 0
+            }
 
         newElevator
 

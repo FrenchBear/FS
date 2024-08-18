@@ -39,7 +39,9 @@ type ElevatorsActor with
                 this.registerEvent
                     { ElevatorEvent.Clock = clk.addOffset this.B.Durations.openingDoorsDuration
                       CabinIndex = 0
-                      Event = EndOpeningDoors }
+                      Event = EndOpeningDoors
+                      CreatedOn = clk
+                    }
 
             // Otherwise we start accelerating
             else
@@ -55,7 +57,9 @@ type ElevatorsActor with
                 this.registerEvent
                     { ElevatorEvent.Clock = clk.addOffset this.B.Durations.accelerationDuration
                       CabinIndex = 0
-                      Event = EndAcceleration }
+                      Event = EndAcceleration
+                      CreatedOn = clk
+                    }
 
         // Cabin is not idle, but it may be closing doors with no direction. Update direction in this case
         elif cabin.Direction = NoDirection then
@@ -75,7 +79,9 @@ type ElevatorsActor with
                     this.registerEvent
                         { ElevatorEvent.Clock = clk.addOffset (this.B.Durations.openingDoorsDuration - remainigTime)
                           CabinIndex = 0
-                          Event = EndOpeningDoors }
+                          Event = EndOpeningDoors
+                          CreatedOn = clk
+                        }
 
                 else
                     assert (cabin.Door = Opening || cabin.Door = Open)
@@ -134,10 +140,14 @@ type ElevatorsActor with
         if this.Cabins[0].getStopRequested this.Cabins[0].Floor || landingStopRequest then
             { ElevatorEvent.Clock = clk.addOffset this.B.Durations.fullSpeedBeforeDecisionDuration
               CabinIndex = 0
-              Event = EndMovingFullSpeed }
+              Event = EndMovingFullSpeed
+              CreatedOn = clk
+            }
         else
             this.recordStat clk 0 StatMotorFullSpeed
 
             { ElevatorEvent.Clock = clk.addOffset this.B.Durations.oneLevelFullSpeed
               CabinIndex = 0
-              Event = Decision }
+              Event = Decision
+              CreatedOn = clk
+            }

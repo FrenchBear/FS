@@ -218,7 +218,9 @@ type PersonEventDetail =
 type PersonEvent =
     { Clock: Clock
       Event: PersonEventDetail
-      Person: Person }
+      Person: Person
+      CreatedOn: Clock
+    }
 
 
 type ElevatorEventDetail =
@@ -233,7 +235,9 @@ type ElevatorEventDetail =
 type ElevatorEvent =
     { Clock: Clock
       CabinIndex: int
-      Event: ElevatorEventDetail }
+      Event: ElevatorEventDetail
+      CreatedOn: Clock
+    }
 
 
 // ----------------------------------------

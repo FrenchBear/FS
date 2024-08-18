@@ -69,7 +69,9 @@ type PersonsActor with
             let evt =
                 { PersonEvent.Clock = p.ArrivalTime
                   Person = p
-                  Event = Arrival }
+                  Event = Arrival
+                  CreatedOn = p.ArrivalTime
+                }
 
             newPersons.PersonEventsQueue.Enqueue(evt, evt.Clock)
 
