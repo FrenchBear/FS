@@ -165,9 +165,9 @@ type Cabin =
 type CabinStatistic =
     | StatCabinIdle
     | StatCabinBusy
-    | StatMotorOff of Floor
-    | StatMotorAccelerating of Floor
-    | StatMotorFullSpeed of Floor
+    | StatMotorOff
+    | StatMotorAccelerating
+    | StatMotorFullSpeed
     | StatMotorDecelerating
     | StatDoorsOpen
     | StatDoorsClosed

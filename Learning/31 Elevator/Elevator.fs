@@ -1,5 +1,6 @@
 ﻿// 31 Elevator
 // Elevator simulation in F#
+// Basic event processing, "business logic" moved to a separate module
 //
 // 2014-08-15   PV
 
@@ -7,57 +8,6 @@
 module ElevatorsModule
 
 type ElevatorsActor with
-    static member createNew b =
-        let cabinInitialState =
-            { Floor = Floor 0
-              Motor = Off
-              Direction = NoDirection
-              Door = Closed
-              Cabin = Idle
-              _StopRequested = Array.create b.SimulationElevators.Levels false
-              Capacity = b.SimulationElevators.Capacity
-              Persons = [] }
-
-        let newElevator =
-            { B = b
-              ElevatorEventsQueue = new System.Collections.Generic.PriorityQueue<ElevatorEvent, Clock>()
-              Cabins = Array.create b.SimulationElevators.NumberOfCabins cabinInitialState
-              Statistics = Array.create b.SimulationElevators.NumberOfCabins []
-              Landings = { Landings._Persons = [| for i in 0 .. b.SimulationElevators.Levels - 1 -> [] |] }
-              Persons = None }
-
-        // Initial event, just to check that initial state is Ok
-        newElevator.registerEvent
-            { ElevatorEvent.Clock = Clock 0
-              CabinIndex = 0
-              Event = ElevatorOn }
-
-        newElevator
-
-    member this.getNextElevatorEventClock() =
-        if this.ElevatorEventsQueue.Count = 0 then
-            None
-        else
-            let evt = this.ElevatorEventsQueue.Peek()
-            Some evt.Clock
-
-    member this.getNextElevatorEvent() = this.ElevatorEventsQueue.Dequeue()
-
-    member this.isStopRequestedBeyondPosition (cabin: Cabin) floor direction =
-        if cabin.getStopRequested floor then
-            true
-        else
-            let nf = floor.nextFloor this.levels direction
-
-            match nf with
-            | None -> false
-            | Some f -> this.isStopRequestedBeyondPosition cabin f direction
-
-    member this.recordStat clk ixCabin stat =
-        this.Statistics[ixCabin] <- (clk, stat) :: this.Statistics[ixCabin]
-
-    member this.registerEvent evt =
-        this.ElevatorEventsQueue.Enqueue(evt, evt.Clock)
 
     member this.processEvent(clk: Clock) =
         let evt = this.ElevatorEventsQueue.Dequeue()
@@ -80,7 +30,7 @@ type ElevatorsActor with
             assert (cabin.Floor = Floor 0)
 
             this.recordStat clk 0 StatCabinIdle
-            this.recordStat clk 0 (StatMotorOff(Floor 0))
+            this.recordStat clk 0 StatMotorOff
             this.recordStat clk 0 StatDoorsClosed
             this.recordStat clk 0 (StatPersonsInCabin 0)
 
@@ -99,60 +49,19 @@ type ElevatorsActor with
             this.Cabins[0] <- { cabin with Motor = FullSpeed }
 
         | Decision ->
-            // Update Position
             let cabin = this.Cabins[0]
             assert (cabin.Motor = FullSpeed)
             assert (cabin.Door = Closed)
             assert (cabin.Direction <> NoDirection)
             assert (cabin.Cabin = Busy)
 
+            // Update Position
             let nf = cabin.Floor.nextFloor this.levels cabin.Direction
             assert (nf.IsSome)
             this.Cabins[0] <- { cabin with Floor = nf.Value }
 
-            // Decide if we stop at next floor or not
-            let evt =
-
-                // For landings, we stop only if there is at least one person going in the same direction as the cabin
-                let landingStopRequest =
-                    let ll = this.Landings.getPersons this.Cabins[0].Floor
-
-                    if ll.IsEmpty then
-                        false
-                    else
-                        let shouldContinueBecauseStopRequested =
-                            this.isStopRequestedBeyondPosition
-                                this.Cabins[0]
-                                this.Cabins[0].Floor
-                                this.Cabins[0].Direction
-
-                        if not shouldContinueBecauseStopRequested then
-                            true // If no more stop requested and there's at least 1 person waiting on landing, then we stop, regardless of whether it's moving up or down
-                        else
-                            let rec checkPersonGoingInCabinDirection lst =
-                                match lst with
-                                | [] -> false
-                                | p :: remainingPersons ->
-                                    if
-                                        (cabin.Direction = Up && p.ExitFloor > this.Cabins[0].Floor)
-                                        || (cabin.Direction = Down && p.ExitFloor < this.Cabins[0].Floor)
-                                    then
-                                        true
-                                    else
-                                        checkPersonGoingInCabinDirection remainingPersons
-
-                            checkPersonGoingInCabinDirection ll
-
-                if cabin.getStopRequested this.Cabins[0].Floor || landingStopRequest then
-                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.fullSpeedBeforeDecisionDuration
-                      CabinIndex = 0
-                      Event = EndMovingFullSpeed }
-                else
-                    this.recordStat clk 0 (StatMotorFullSpeed nf.Value)
-
-                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.oneLevelFullSpeed
-                      CabinIndex = 0
-                      Event = Decision }
+            // Some business logic to decide whether cabin should start decelerating and stop at this floor, or continue full speed to next floor (and take decision again)
+            let evt = this.getDecisionEvent clk
 
             this.registerEvent evt
 
@@ -178,7 +87,7 @@ type ElevatorsActor with
             assert (cabin.Direction <> NoDirection)
             assert (cabin.Cabin = Busy)
 
-            this.recordStat clk 0 (StatMotorOff cabin.Floor)
+            this.recordStat clk 0 StatMotorOff
 
             // Ok, we arrive at a floor with stop requested
             this.registerEvent
@@ -362,89 +271,7 @@ type ElevatorsActor with
                       CabinIndex = 0
                       Event = EndAcceleration }
 
-                this.recordStat clk 0 (StatMotorAccelerating cabin.Floor)
-
-        Logging.logCabinUpdate clk this.B originalCabin this.Cabins[0]
-
-
-    member this.callElevator (clk: Clock) (entry: Floor) (exit: Floor) =
-        assert (exit <> entry)
-
-        if this.B.LogDetails.showEvents then
-            printfn "\nCalling elevator from level %A to go to level %A" entry exit
-
-        // Keep a deep copy for final logging
-        let originalCabin = this.Cabins[0].deepCopy ()
-
-        let cabin = this.Cabins[0]
-
-        // Actually only do something if elevator is idle
-        // If elevator is busy, then at some point elevator will arrive
-        if cabin.Cabin = Idle then
-            assert (cabin.Door = Closed)
-            assert (cabin.Motor = Off)
-            assert (cabin.Direction = NoDirection)
-
-            // If we call elevator from the floor the cabin is currently waiting, then we just have to open doors
-            if cabin.Floor = entry then
-                this.recordStat clk 0 StatCabinBusy
-
-                this.Cabins[0] <-
-                    { cabin with
-                        Cabin = Busy
-                        Door = Opening }
-
-                this.registerEvent
-                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.openingDoorsDuration
-                      CabinIndex = 0
-                      Event = EndOpeningDoors }
-
-            // Otherwise we start accelerating
-            else
-                this.recordStat clk 0 StatCabinBusy
-                this.recordStat clk 0 (StatMotorAccelerating cabin.Floor)
-
-                this.Cabins[0] <-
-                    { cabin with
-                        Cabin = Busy
-                        Motor = Accelerating
-                        Direction = if (entry > cabin.Floor) then Up else Down }
-
-                this.registerEvent
-                    { ElevatorEvent.Clock = clk.addOffset this.B.Durations.accelerationDuration
-                      CabinIndex = 0
-                      Event = EndAcceleration }
-
-        // Cabin is not idle, but it may be closing doors with no direction. Update direction in this case
-        elif cabin.Direction = NoDirection then
-            if entry = cabin.Floor then
-                if cabin.Door = Closing then
-                    // Cabin is closing doors, so we cancel current event, and register a doors opening event
-                    // with correct amount of time
-                    // Note that this kind of manipulation should be handled by scheduler, but because of module
-                    // order and dependencies order, it's directly managed here.
-                    let nextElevatorEvent = this.getNextElevatorEvent () // Removes the event from queue
-                    assert (nextElevatorEvent.Event = EndClosingDoors)
-                    let remainigTime = nextElevatorEvent.Clock.minus clk
-
-                    this.Cabins[0] <- { cabin with Door = Opening } // Door is now opening
-
-                    // And we register a new EndOpeningDoors event for the cabin
-                    this.registerEvent
-                        { ElevatorEvent.Clock = clk.addOffset (this.B.Durations.openingDoorsDuration - remainigTime)
-                          CabinIndex = 0
-                          Event = EndOpeningDoors }
-
-                else
-                    assert (cabin.Door = Opening || cabin.Door = Open)
-                    () // Just wait for the door to open
-
-            else
-                // Cabin must move up or down, so we set direction and wait for the doors to close,
-                // once the doors are closed, motor will turn on and start accelerating
-                this.Cabins[0] <-
-                    { cabin with
-                        Direction = if (entry > cabin.Floor) then Up else Down }
+                this.recordStat clk 0 StatMotorAccelerating
 
         Logging.logCabinUpdate clk this.B originalCabin this.Cabins[0]
 
@@ -470,7 +297,7 @@ type ElevatorsActor with
             | (clk: Clock, ce: CabinStatistic) :: tail ->
                 let newAcc =
                     match ce with
-                    | StatMotorOff fl ->
+                    | StatMotorOff ->
                         assert (clk = Clock 0 || acc.IsMotorOn = true)
 
                         if clk > Clock 0 then
@@ -482,13 +309,13 @@ type ElevatorsActor with
                             IsMotorOn = false
                             LastMotorOff = clk }
 
-                    | StatMotorAccelerating fl ->
+                    | StatMotorAccelerating ->
                         { acc with
                             MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOff)
                             IsMotorOn = true
                             LastMotorOn = clk }
 
-                    | StatMotorFullSpeed fl ->
+                    | StatMotorFullSpeed ->
                         acc.LevelsCovered[acc.PersonsInCabin] <- acc.LevelsCovered[acc.PersonsInCabin] + 1
                         acc
 

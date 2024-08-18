@@ -13,6 +13,8 @@
 		<Compile Include="UniformUntRandom.fs" />
 		<Compile Include="Types.fs" />
 		<Compile Include="Logging.fs" />
+		<Compile Include="ElevatorHelpers.fs" />
+		<Compile Include="ElevatorBusinessLogic.fs" />
 		<Compile Include="Elevator.fs" />
 		<Compile Include="Person.fs" />
 		<Compile Include="Simulation.fs" />

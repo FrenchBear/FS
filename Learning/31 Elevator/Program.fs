@@ -47,7 +47,7 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
     //printSimulationStats res.SimulationStats
 
-//testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
+testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 
 
 let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
@@ -77,7 +77,7 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
     //printSimulationStats res.SimulationStats
 
-//testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 
 
 
@@ -96,7 +96,7 @@ let testARandomSimulation () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     printSimulationStats res.SimulationStats
 
-//testARandomSimulation ()
+testARandomSimulation ()
 
 
 let testContinuousSimulation () =
