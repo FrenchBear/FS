@@ -59,7 +59,7 @@ type PersonsActor with
                        { tempPersonsArray[i] with
                            Id = PersonId(i + 1) } |]
 
-        if b.LogDetails.showInitialPersons then
+        if b.LogDetails.ShowInitialPersons then
             printfn "\nPersons for the simulation"
 
             for p in personsArray do
@@ -78,17 +78,10 @@ type PersonsActor with
         newPersons
 
 
-    //member this.getNextPersonEventClock() =
-    //    if this.B.EventsQueue.Count = 0 then
-    //        None
-    //    else
-    //        let evt = this.PersonEventsQueue.Peek()
-    //        Some(evt.Clock)
-
     member this.processEvent clk (evt: PersonEvent) =
         //let evt = this.PersonEventsQueue.Dequeue()
 
-        if this.B.LogDetails.showEvents then
+        if this.B.LogDetails.ShowEvents then
             Logging.logMessage this.B evt.Clock $"Person evt: {evt}"
 
         assert (clk = evt.Clock)
@@ -134,17 +127,24 @@ type PersonsActor with
         let ls = List.ofSeq this.TransportedPersons
 
         let avgWaitForElevator =
-            double (ls |> List.sumBy (fun p -> p.waitForElevator ()))
-            / double (List.length ls)
+            if List.length ls = 0
+            then 0.0
+            else double (ls |> List.sumBy (fun p -> p.waitForElevator ())) / double (List.length ls)
 
         let avgTotalTransport =
-            double (ls |> List.sumBy (fun p -> p.totalTransportation ()))
-            / double (List.length ls)
+            if List.length ls = 0
+            then 0.0
+            else double (ls |> List.sumBy (fun p -> p.totalTransportation ())) / double (List.length ls)
 
-        let maxWaitForElevator = ls |> List.map (fun p -> p.waitForElevator ()) |> List.max
+        let maxWaitForElevator =
+            if List.length ls = 0 
+            then 0
+            else ls |> List.map (fun p -> p.waitForElevator ()) |> List.max
 
         let maxTotalTransport =
-            ls |> List.map (fun p -> p.totalTransportation ()) |> List.max
+            if List.length ls = 0 
+            then 0
+            else ls |> List.map (fun p -> p.totalTransportation ()) |> List.max
 
         // Return a PersonsStats record
         { AvgWaitForElevator = avgWaitForElevator

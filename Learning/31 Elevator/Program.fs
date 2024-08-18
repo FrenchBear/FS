@@ -10,6 +10,14 @@
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
+//let rndPersons = UniformUntRandom.createNew 1
+//let mutable rmax = 0
+//for i in 1..1000000 do
+//    rmax <- max rmax (rndPersons.nextValue())
+//printfn "%d" rmax
+
+//System.Diagnostics.Debugger.Break()
+
 
 let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
 
@@ -87,8 +95,8 @@ let testARandomSimulation () =
     let b =
         { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
           SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
-          SimulationPersons = SimulationRandomGeneration(100, 800, 1, Ground50Levels50) 
-          LogDetails = standardLogDetails
+          SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, Ground50Levels50) 
+          LogDetails = { standardLogDetails with ShowInitialPersons=true }
           Durations = standardDurations
         }
 
@@ -98,7 +106,7 @@ let testARandomSimulation () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     printSimulationStats res.SimulationStats
 
-//testARandomSimulation ()
+testARandomSimulation ()
 
 
 let testContinuousSimulation () =
@@ -111,7 +119,7 @@ let testContinuousSimulation () =
         }
 
     printfn "\nContinuous random simulation of variable number of persons over 800s"
-    for np in 5..5..120 do
+    for np in 0..5..130 do
         let b = {refDataBag with SimulationPersons = SimulationRandomGeneration(np, 800, 1, Ground50Levels50) }
         let res = runSimulation b
 
@@ -122,7 +130,7 @@ let testContinuousSimulation () =
 //testContinuousSimulation ()
 
 
-let testDoorsClosingWhenAPersonArrives =
+let testDoorsClosingWhenAPersonArrives () =
     // Person 2 arrives just when the door is closing, and person 3 1s later
     // Check that the closing door sequence is interrupted (ClosingDoors event is deleted) while both persons are maintained in the list
     let personsData = [|
@@ -139,17 +147,17 @@ let testDoorsClosingWhenAPersonArrives =
               Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
           LogDetails = { 
-              showLog = false
-              showEvents = false
-              showInitialPersons = false
-              showDetailedPersonStats = false
-              showDetailedElevatorStatRecordss = false }
+              ShowLog = false
+              ShowEvents = false
+              ShowInitialPersons = false
+              ShowDetailedPersonStats = false
+              ShowDetailedElevatorStatRecords = false }
           Durations = { 
-              accelerationDuration = 2
-              oneLevelFullSpeed = 2
-              fullSpeedBeforeDecisionDuration = 1
-              openingDoorsDuration = 4                  // Need a long closing door for this test
-              moveInDuration = 2 }
+              AccelerationDuration = 2
+              OneLevelFullSpeed = 2
+              FullSpeedBeforeDecisionDuration = 1
+              OpeningDoorsDuration = 4                  // Need a long closing door for this test
+              MoveInDuration = 2 }
           }
 
     let res = runSimulation b
@@ -163,5 +171,8 @@ let testDoorsClosingWhenAPersonArrives =
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     printSimulationStats res.SimulationStats
+
+//testDoorsClosingWhenAPersonArrives ()
+
 
 printfn "\nDone."

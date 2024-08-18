@@ -17,6 +17,7 @@ type ElevatorsActor with
               Door = Closed
               Cabin = Idle
               _StopRequested = Array.create b.SimulationElevators.Levels false
+              IgnoreNextEndClosingDoorsEvent = false
               Capacity = b.SimulationElevators.Capacity
               Persons = [] }
 

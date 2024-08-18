@@ -7,7 +7,7 @@
 module Logging
 
 let logMessage b clk msg =
-    if b.LogDetails.showLog then
+    if b.LogDetails.ShowLog then
         let (Clock iClk) = clk
         printfn $"clk: {iClk, 4}  {msg}"
 

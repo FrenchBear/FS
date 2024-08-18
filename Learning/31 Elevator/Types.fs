@@ -11,32 +11,32 @@ module Types
 // Simulation parameters
 
 type LogDetails =
-    { showLog: bool
-      showEvents: bool
-      showInitialPersons: bool
-      showDetailedPersonStats: bool
-      showDetailedElevatorStatRecordss: bool }
+    { ShowLog: bool
+      ShowEvents: bool
+      ShowInitialPersons: bool
+      ShowDetailedPersonStats: bool
+      ShowDetailedElevatorStatRecords: bool }
 
 type Durations =
-    { accelerationDuration: int // and deceleration duration
-      oneLevelFullSpeed: int
-      fullSpeedBeforeDecisionDuration: int // and after decision before deceleration
-      openingDoorsDuration: int // and closing doors duration; Include delay between motor off/opening and closed/motor on
-      moveInDuration: int } // and move out duration
+    { AccelerationDuration: int // and deceleration duration
+      OneLevelFullSpeed: int
+      FullSpeedBeforeDecisionDuration: int // and after decision before deceleration
+      OpeningDoorsDuration: int // and closing doors duration; Include delay between motor off/opening and closed/motor on
+      MoveInDuration: int } // and move out duration
 
 let standardLogDetails =
-    { showLog = false
-      showEvents = false
-      showInitialPersons = false
-      showDetailedPersonStats = false
-      showDetailedElevatorStatRecordss = false }
+    { ShowLog = false
+      ShowEvents = false
+      ShowInitialPersons = false
+      ShowDetailedPersonStats = false
+      ShowDetailedElevatorStatRecords = false }
 
 let standardDurations =
-    { accelerationDuration = 2
-      oneLevelFullSpeed = 2
-      fullSpeedBeforeDecisionDuration = 1
-      openingDoorsDuration = 2
-      moveInDuration = 2 }
+    { AccelerationDuration = 2
+      OneLevelFullSpeed = 2
+      FullSpeedBeforeDecisionDuration = 1
+      OpeningDoorsDuration = 2
+      MoveInDuration = 2 }
 
 (*
     One level with acceleration, decision, and deceleration: 6s
@@ -140,6 +140,7 @@ type Cabin =
       Direction: Direction
       Cabin: CabinState
       _StopRequested: bool array
+      IgnoreNextEndClosingDoorsEvent: bool
       Capacity: int
       Persons: Person list }
 

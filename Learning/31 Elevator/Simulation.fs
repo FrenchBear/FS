@@ -16,7 +16,7 @@ let runSimulation (b: DataBag) =
     let personsActor = PersonsActor.createNew b elevatorsActor
     elevatorsActor.Persons <- Some personsActor
 
-    if b.LogDetails.showLog then
+    if b.LogDetails.ShowLog then
         printfn ""
 
     let rec processNextEvent (clk: Clock) eventCount =
@@ -26,10 +26,10 @@ let runSimulation (b: DataBag) =
         then
             let (Clock iClk) = clk
 
-            if b.LogDetails.showLog then
+            if b.LogDetails.ShowLog then
                 printfn "\nEnd simulation clk: %d\n" iClk
 
-            if b.LogDetails.showDetailedPersonStats then
+            if b.LogDetails.ShowDetailedPersonStats then
                 personsActor.printDetailedPersonStats ()
 
             let ps = personsActor.getPersonStats ()
