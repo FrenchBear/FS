@@ -239,6 +239,10 @@ type ElevatorEvent =
       CreatedOn: Clock
     }
 
+// For a more general mechanism, there should be only 1 shared PriorityQueue of CommonEvent
+//type CommonEvent =
+//    | ElevatorEvent of ElevatorEvent
+//    | PersonEvent of PersonEvent
 
 // ----------------------------------------
 // Simulation data

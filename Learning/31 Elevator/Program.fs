@@ -80,7 +80,6 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
 testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 
 
-
 // Just a random simulation
 let testARandomSimulation () =
     let b =
@@ -107,7 +106,7 @@ let testContinuousSimulation () =
           Durations = standardDurations
         }
 
-    printfn "Continuous random simulation of variable number of persons over 800s"
+    printfn "\nContinuous random simulation of variable number of persons over 800s"
     for np in 5..5..120 do
         let b = {refDataBag with SimulationPersons = SimulationRandomGeneration(np, 800, 1, Ground50Levels50) }
         let res = runSimulation b
