@@ -10,7 +10,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="UniformUntRandom.fs" />
+		<Compile Include="ParkMillerRandom.fs" />
 		<Compile Include="Types.fs" />
 		<Compile Include="Logging.fs" />
 		<Compile Include="ElevatorHelpers.fs" />

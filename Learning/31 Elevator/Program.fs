@@ -96,7 +96,7 @@ let testARandomSimulation () =
         { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
           SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, Ground50Levels50) 
-          LogDetails = { standardLogDetails with ShowInitialPersons=true }
+          LogDetails = { standardLogDetails with ShowInitialPersons=false }
           Durations = standardDurations
         }
 

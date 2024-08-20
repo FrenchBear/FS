@@ -22,7 +22,7 @@ type PersonsActor with
             match b.SimulationPersons with
             | SimulationPersonsArray pa -> pa
             | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) ->
-                let rndPersons = UniformUntRandom.createNew randomSeed
+                let rndPersons = ParkMillerRandom.createNew randomSeed
 
                 let rec getRandomPerson () =
                     let entry, exit =
