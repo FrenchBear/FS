@@ -49,7 +49,7 @@ type ElevatorsActor with
 
         // Actually only do something if elevator is idle
         // If elevator is busy, then at some point elevator will arrive      but: ToDo: when the cabin is busy and closing doors, if correct direction, we interrupt closing doors
-        if cabin.Cabin = Idle then
+        if cabin.CabinStatus = Idle then
             assert (cabin.Door = Closed)
             assert (cabin.Motor = Off)
             assert (cabin.Direction = NoDirection)
@@ -60,7 +60,7 @@ type ElevatorsActor with
 
                 this.Cabins[0] <-
                     { cabin with
-                        Cabin = Busy
+                        CabinStatus = Busy
                         Door = Opening }
 
                 this.registerEvent
@@ -76,7 +76,7 @@ type ElevatorsActor with
 
                 this.Cabins[0] <-
                     { cabin with
-                        Cabin = Busy
+                        CabinStatus = Busy
                         Motor = Accelerating
                         Direction = if (entry > cabin.Floor) then Up else Down }
 

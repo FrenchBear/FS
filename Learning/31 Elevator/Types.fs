@@ -138,7 +138,7 @@ type Cabin =
       Motor: MotorState
       Door: DoorState
       Direction: Direction
-      Cabin: CabinState
+      CabinStatus: CabinState
       _StopRequested: bool array
       IgnoreNextEndClosingDoorsEvent: bool
       Capacity: int
@@ -289,9 +289,6 @@ and
     { B: DataBag
       TransportedPersons: System.Collections.Generic.List<Person>
       Elevators: ElevatorsActor }
-
-    member this.levels = this.B.SimulationElevators.Levels
-
 
 // ----------------------------------------
 // Simulation Results

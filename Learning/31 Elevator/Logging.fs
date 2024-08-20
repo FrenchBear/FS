@@ -26,8 +26,8 @@ let logCabinUpdate clk b before after =
     if before.Direction <> after.Direction then
         lst.Add($"Direction {before.Direction}→{after.Direction}")
 
-    if before.Cabin <> after.Cabin then
-        lst.Add($"Cabin {before.Cabin}→{after.Cabin}")
+    if before.CabinStatus <> after.CabinStatus then
+        lst.Add($"Cabin {before.CabinStatus}→{after.CabinStatus}")
 
 
     let lstStopRequested = new System.Collections.Generic.List<string>()

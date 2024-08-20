@@ -15,7 +15,7 @@ type ElevatorsActor with
               Motor = Off
               Direction = NoDirection
               Door = Closed
-              Cabin = Idle
+              CabinStatus = Idle
               _StopRequested = Array.create b.SimulationElevators.Levels false
               IgnoreNextEndClosingDoorsEvent = false
               Capacity = b.SimulationElevators.Capacity
