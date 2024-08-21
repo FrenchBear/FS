@@ -1,5 +1,6 @@
 ﻿// 31 Elevator
 // Elevator simulation in F#
+// Simple console logging
 //
 // 2014-08-15   PV
 
@@ -17,11 +18,11 @@ let logCabinUpdate clk b before after =
     if before.Floor <> after.Floor then
         lst.Add($"Floor {before.Floor}→{after.Floor}")
 
-    if before.Motor <> after.Motor then
-        lst.Add($"Motor {before.Motor}→{after.Motor}")
+    if before.MotorStatus <> after.MotorStatus then
+        lst.Add($"Motor {before.MotorStatus}→{after.MotorStatus}")
 
-    if before.Door <> after.Door then
-        lst.Add($"Door {before.Door}→{after.Door}")
+    if before.DoorStatus <> after.DoorStatus then
+        lst.Add($"Door {before.DoorStatus}→{after.DoorStatus}")
 
     if before.Direction <> after.Direction then
         lst.Add($"Direction {before.Direction}→{after.Direction}")
@@ -33,8 +34,10 @@ let logCabinUpdate clk b before after =
     let lstStopRequested = new System.Collections.Generic.List<string>()
 
     for i in 0 .. b.SimulationElevators.Levels - 1 do
-        if before._StopRequested[i] <> after._StopRequested[i] then
-            lstStopRequested.Add($"StopRequested[{i}]: {before._StopRequested[i]}→{after._StopRequested[i]}")
+        let b = before.getStopRequested (Floor i)
+        let a = after.getStopRequested (Floor i)
+        if a<>b then
+            lstStopRequested.Add($"StopRequested[{i}]: {b}→{a}")
 
     if not (lstStopRequested.Count = 0) then
         lst.Add(System.String.Join(", ", lstStopRequested))
@@ -73,12 +76,12 @@ let logPersonArrival b clk p =
 
 let logPersonExit b clk p =
     let (PersonId pid) = p.Id
-    let (Clock arrivalIClk) = p.ArrivalTime
+    let (Clock arrivalIClk) = p.ArrivalClock
     let (Floor entry) = p.EntryFloor
     let (Floor exit) = p.ExitFloor
-    let (Clock entryIClk) = p.EntryTime.Value
+    let (Clock entryIClk) = p.EntryClock.Value
     let waitingCabin = entryIClk - arrivalIClk
-    let (Clock exitIClk) = p.ExitTime.Value
+    let (Clock exitIClk) = p.ExitClock.Value
     let totalTransportationTime = exitIClk - arrivalIClk
 
     logMessage b clk

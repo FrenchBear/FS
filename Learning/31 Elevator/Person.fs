@@ -45,15 +45,15 @@ type PersonsActor with
                         { Id = PersonId 0
                           EntryFloor = entry
                           ExitFloor = exit
-                          ArrivalTime = arrival
-                          EntryTime = None
-                          ExitTime = None }
+                          ArrivalClock = arrival
+                          EntryClock = None
+                          ExitClock = None }
 
                 // First generate a random list
                 let tempPersonsArray = [| for _ in 0 .. personsToCarry - 1 -> getRandomPerson () |]
 
                 // Then sort by arrival time and assign Ids in arrival order
-                Array.sortInPlaceBy (fun p -> p.ArrivalTime) tempPersonsArray
+                Array.sortInPlaceBy (fun p -> p.ArrivalClock) tempPersonsArray
 
                 [| for i in 0 .. personsToCarry - 1 ->
                        { tempPersonsArray[i] with
@@ -67,10 +67,10 @@ type PersonsActor with
 
         for p in personsArray do
             let evt =
-                { PersonEvent.Clock = p.ArrivalTime
+                { PersonEvent.Clock = p.ArrivalClock
                   Person = p
                   Event = Arrival
-                  CreatedOn = p.ArrivalTime
+                  CreatedOn = p.ArrivalClock
                 }
 
             b.EventsQueue.Enqueue(PersonEvent evt, evt.Clock)
@@ -107,13 +107,13 @@ type PersonsActor with
         printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
         printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
 
-        for p in this.TransportedPersons.OrderBy(fun p -> p.ArrivalTime) do
+        for p in this.TransportedPersons.OrderBy(fun p -> p.ArrivalClock) do
             let (PersonId pid) = p.Id
             let (Floor entryFloor) = p.EntryFloor
             let (Floor exitFloor) = p.ExitFloor
-            let (Clock iArrival) = p.ArrivalTime
-            let (Clock iEntry) = p.EntryTime.Value
-            let (Clock iExit) = p.ExitTime.Value
+            let (Clock iArrival) = p.ArrivalClock
+            let (Clock iEntry) = p.EntryClock.Value
+            let (Clock iExit) = p.ExitClock.Value
 
             let waitForElevator = iEntry - iArrival
             let totalTransportTime = iExit - iArrival
@@ -129,22 +129,22 @@ type PersonsActor with
         let avgWaitForElevator =
             if List.length ls = 0
             then 0.0
-            else double (ls |> List.sumBy (fun p -> p.waitForElevator ())) / double (List.length ls)
+            else double (ls |> List.sumBy (fun p -> p.waitForElevatorTime ())) / double (List.length ls)
 
         let avgTotalTransport =
             if List.length ls = 0
             then 0.0
-            else double (ls |> List.sumBy (fun p -> p.totalTransportation ())) / double (List.length ls)
+            else double (ls |> List.sumBy (fun p -> p.totalTransportationTime ())) / double (List.length ls)
 
         let maxWaitForElevator =
             if List.length ls = 0 
             then 0
-            else ls |> List.map (fun p -> p.waitForElevator ()) |> List.max
+            else ls |> List.map (fun p -> p.waitForElevatorTime ()) |> List.max
 
         let maxTotalTransport =
             if List.length ls = 0 
             then 0
-            else ls |> List.map (fun p -> p.totalTransportation ()) |> List.max
+            else ls |> List.map (fun p -> p.totalTransportationTime ()) |> List.max
 
         // Return a PersonsStats record
         { AvgWaitForElevator = avgWaitForElevator

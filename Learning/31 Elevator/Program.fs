@@ -22,16 +22,16 @@ printfn "Elevator simulation in F#\n"
 let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
 
     let tenPersonsArrivingAtTimeZero = [|
-        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 2; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 3; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 4; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 5; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 6; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 7; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 8; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 9; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 10; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
+        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 2; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 3; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 4; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 5; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 6; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 7; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 8; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 9; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 10; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
     |]
 
     // Create DataBag
@@ -64,8 +64,8 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     // Person 2 arrives just when the door is about to close
     // Check that person events are processed before elevator events, so both persons are transported together
     let personsData = [|
-        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 2; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 4; EntryTime = None; ExitTime = None }
+        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 2; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 4; EntryClock = None; ExitClock = None }
     |]
 
     let b =
@@ -96,7 +96,7 @@ let testARandomSimulation () =
         { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
           SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, Ground50Levels50) 
-          LogDetails = { standardLogDetails with ShowInitialPersons=false }
+          LogDetails = { standardLogDetails with ShowEvents=false }
           Durations = standardDurations
         }
 
@@ -134,9 +134,9 @@ let testDoorsClosingWhenAPersonArrives () =
     // Person 2 arrives just when the door is closing, and person 3 1s later
     // Check that the closing door sequence is interrupted (ClosingDoors event is deleted) while both persons are maintained in the list
     let personsData = [|
-        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalTime = Clock 0; EntryTime = None; ExitTime = None }
-        { Id = PersonId 2; EntryFloor = Floor 3; ExitFloor = Floor 0; ArrivalTime = Clock 27; EntryTime = None; ExitTime = None }
-        { Id = PersonId 3; EntryFloor = Floor 3; ExitFloor = Floor 0; ArrivalTime = Clock 28; EntryTime = None; ExitTime = None }
+        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
+        { Id = PersonId 2; EntryFloor = Floor 3; ExitFloor = Floor 0; ArrivalClock = Clock 27; EntryClock = None; ExitClock = None }
+        { Id = PersonId 3; EntryFloor = Floor 3; ExitFloor = Floor 0; ArrivalClock = Clock 28; EntryClock = None; ExitClock = None }
     |]
 
     let b =
@@ -165,8 +165,8 @@ let testDoorsClosingWhenAPersonArrives () =
     assert (res.SimulationStats.SimulationDuration = 58)
     let tp2 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 2)
     let tp3 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 3)
-    assert (tp2.EntryTime = Some(Clock 28))
-    assert (tp3.EntryTime = Some(Clock 30))
+    assert (tp2.EntryClock = Some(Clock 28))
+    assert (tp3.EntryClock = Some(Clock 30))
 
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats

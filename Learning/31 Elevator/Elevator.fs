@@ -13,8 +13,8 @@ type ElevatorsActor with
         let cz = Clock 0
         Logging.logMessage this.B cz "Elevator On and ready"
         let cabin = this.Cabins[0]
-        assert (cabin.Motor = Off)
-        assert (cabin.Door = Closed)
+        assert (cabin.MotorStatus = Off)
+        assert (cabin.DoorStatus = Closed)
         assert (cabin.Direction = NoDirection)
         assert (cabin.CabinStatus = Idle)
         assert (cabin.Floor = Floor 0)
@@ -37,8 +37,8 @@ type ElevatorsActor with
 
         | EndAcceleration ->
             let cabin = this.Cabins[0]
-            assert (cabin.Motor = Accelerating)
-            assert (cabin.Door = Closed)
+            assert (cabin.MotorStatus = Accelerating)
+            assert (cabin.DoorStatus = Closed)
             assert (cabin.Direction <> NoDirection)
             assert (cabin.CabinStatus = Busy)
 
@@ -48,12 +48,12 @@ type ElevatorsActor with
                   Event = Decision
                   CreatedOn = clk }
 
-            this.Cabins[0] <- { cabin with Motor = FullSpeed }
+            this.Cabins[0] <- { cabin with MotorStatus = FullSpeed }
 
         | Decision ->
             let cabin = this.Cabins[0]
-            assert (cabin.Motor = FullSpeed)
-            assert (cabin.Door = Closed)
+            assert (cabin.MotorStatus = FullSpeed)
+            assert (cabin.DoorStatus = Closed)
             assert (cabin.Direction <> NoDirection)
             assert (cabin.CabinStatus = Busy)
 
@@ -69,8 +69,8 @@ type ElevatorsActor with
 
         | EndMovingFullSpeed ->
             let cabin = this.Cabins[0]
-            assert (cabin.Motor = FullSpeed)
-            assert (cabin.Door = Closed)
+            assert (cabin.MotorStatus = FullSpeed)
+            assert (cabin.DoorStatus = Closed)
             assert (cabin.Direction <> NoDirection)
             assert (cabin.CabinStatus = Busy)
 
@@ -81,12 +81,12 @@ type ElevatorsActor with
                   CreatedOn = clk }
 
             this.recordStat clk 0 StatMotorDecelerating
-            this.Cabins[0] <- { cabin with Motor = Decelerating }
+            this.Cabins[0] <- { cabin with MotorStatus = Decelerating }
 
         | EndDeceleration ->
             let cabin = this.Cabins[0]
-            assert (cabin.Motor = Decelerating)
-            assert (cabin.Door = Closed)
+            assert (cabin.MotorStatus = Decelerating)
+            assert (cabin.DoorStatus = Closed)
             assert (cabin.Direction <> NoDirection)
             assert (cabin.CabinStatus = Busy)
 
@@ -134,11 +134,11 @@ type ElevatorsActor with
             this.Cabins[0] <-
                 { cabin with
                     Direction = newDirection
-                    Door = Opening
-                    Motor = Off }
+                    DoorStatus = Opening
+                    MotorStatus = Off }
 
         | EndOpeningDoors ->
-            let doorsJustOpening = this.Cabins[0].Door = Opening
+            let doorsJustOpening = this.Cabins[0].DoorStatus = Opening
 
             let allowMoveOut () =
                 // If there's still in the cabin a person that needs to get out, then give it 3 seconds to move out
@@ -164,7 +164,7 @@ type ElevatorsActor with
                         { PersonEvent.Clock = clk.addOffset this.B.Durations.MoveInDuration
                           Person =
                             { p with
-                                ExitTime = Some(clk.addOffset this.B.Durations.MoveInDuration) }
+                                ExitClock = Some(clk.addOffset this.B.Durations.MoveInDuration) }
                           Event = ExitCabin
                           CreatedOn = clk }
 
@@ -196,7 +196,7 @@ type ElevatorsActor with
                                     || (cabin.Direction = Down && p.ExitFloor < cabin.Floor)
 
                             if (personGoesInSameDirectionAsCabin) then
-                                let updatedPerson = { p with EntryTime = Some clk }
+                                let updatedPerson = { p with EntryClock = Some clk }
                                 cabin.setStopRequested p.ExitFloor
 
                                 let newDirection =
@@ -229,19 +229,19 @@ type ElevatorsActor with
                 processPersonGoingInSameDirectionAsCabin (List.rev (this.Landings.getPersons cabin.Floor))
 
             let cabin = this.Cabins[0]
-            assert (cabin.Motor = Off)
-            assert (cabin.Door = Opening || cabin.Door = Open)
+            assert (cabin.MotorStatus = Off)
+            assert (cabin.DoorStatus = Opening || cabin.DoorStatus = Open)
             assert (cabin.CabinStatus = Busy)
 
-            if cabin.Door = Opening then
+            if cabin.DoorStatus = Opening then
                 this.recordStat clk 0 StatDoorsOpen
 
-            this.Cabins[0] <- { cabin with Door = Open }
+            this.Cabins[0] <- { cabin with DoorStatus = Open }
 
             if not (allowMoveOut ()) then
                 if not (allowMoveIn ()) then
                     // Nobody remaining to move out or move in, we can close the doors
-                    this.Cabins[0] <- { cabin with Door = Closing }
+                    this.Cabins[0] <- { cabin with DoorStatus = Closing }
                     this.recordStat clk 0 (StatPersonsInCabin(List.length this.Cabins[0].Persons))
 
                     this.registerEvent
@@ -255,11 +255,11 @@ type ElevatorsActor with
 
         | EndClosingDoors ->
             let cabin = this.Cabins[0]
-            assert (cabin.Motor = Off)
-            assert (cabin.Door = Closing)
+            assert (cabin.MotorStatus = Off)
+            assert (cabin.DoorStatus = Closing)
             assert (cabin.CabinStatus = Busy)
 
-            this.Cabins[0] <- { cabin with Door = Closed }
+            this.Cabins[0] <- { cabin with DoorStatus = Closed }
             this.recordStat clk 0 StatDoorsClosed
 
             match cabin.Direction with
@@ -277,7 +277,7 @@ type ElevatorsActor with
             | _ ->
                 this.Cabins[0] <-
                     { this.Cabins[0] with
-                        Motor = Accelerating }
+                        MotorStatus = Accelerating }
 
                 this.registerEvent
                     { ElevatorEvent.Clock = clk.addOffset this.B.Durations.AccelerationDuration
@@ -319,15 +319,15 @@ type ElevatorsActor with
 
 
                         { acc with
-                            MotorOnTime = acc.MotorOnTime + (clk.minus acc.LastMotorOn)
+                            MotorOnTime = acc.MotorOnTime + (clk.minus acc.LastMotorOnClock)
                             IsMotorOn = false
-                            LastMotorOff = clk }
+                            LastMotorOffClock = clk }
 
                     | StatMotorAccelerating ->
                         { acc with
-                            MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOff)
+                            MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOffClock)
                             IsMotorOn = true
-                            LastMotorOn = clk }
+                            LastMotorOnClock = clk }
 
                     | StatMotorFullSpeed ->
                         acc.LevelsCovered[acc.PersonsInCabin] <- acc.LevelsCovered[acc.PersonsInCabin] + 1
@@ -337,17 +337,17 @@ type ElevatorsActor with
                         assert (clk = Clock 0 || acc.IsCabinBusy = true)
 
                         { acc with
-                            CabinBusyTime = acc.CabinBusyTime + (clk.minus acc.LastCabinBusy)
+                            CabinBusyTime = acc.CabinBusyTime + (clk.minus acc.LastCabinBusyClock)
                             IsCabinBusy = false
-                            LastCabinIdle = clk }
+                            LastCabinIdleClock = clk }
 
                     | StatCabinBusy ->
                         assert (acc.IsCabinBusy = false)
 
                         { acc with
-                            CabinIdleTime = acc.CabinIdleTime + (clk.minus acc.LastCabinIdle)
+                            CabinIdleTime = acc.CabinIdleTime + (clk.minus acc.LastCabinIdleClock)
                             IsCabinBusy = true
-                            LastCabinBusy = clk }
+                            LastCabinBusyClock = clk }
 
                     | StatPersonsInCabin np ->
                         { acc with
@@ -359,9 +359,9 @@ type ElevatorsActor with
                         assert (acc.IsCabinBusy = false)
 
                         { acc with
-                            MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOff)
-                            CabinIdleTime = acc.CabinIdleTime + (clk.minus acc.LastCabinIdle)
-                            LastMotorOff = clk }
+                            MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOffClock)
+                            CabinIdleTime = acc.CabinIdleTime + (clk.minus acc.LastCabinIdleClock)
+                            LastMotorOffClock = clk }
 
                     | StatUselessStop ->
                         { acc with
@@ -376,14 +376,14 @@ type ElevatorsActor with
                 cumulate tail newAcc
 
         let start =
-            { LastMotorOn = Clock 0
-              LastMotorOff = Clock 0
+            { LastMotorOnClock = Clock 0
+              LastMotorOffClock = Clock 0
               IsMotorOn = false
               MotorOnTime = 0
               MotorOffTime = 0
 
-              LastCabinBusy = Clock 0
-              LastCabinIdle = Clock 0
+              LastCabinBusyClock = Clock 0
+              LastCabinIdleClock = Clock 0
               IsCabinBusy = false
               CabinBusyTime = 0
               CabinIdleTime = 0

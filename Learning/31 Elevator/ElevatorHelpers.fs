@@ -12,9 +12,9 @@ type ElevatorsActor with
     static member createNew b =
         let cabinInitialState =
             { Floor = Floor 0
-              Motor = Off
+              MotorStatus = Off
               Direction = NoDirection
-              Door = Closed
+              DoorStatus = Closed
               CabinStatus = Idle
               _StopRequested = Array.create b.SimulationElevators.Levels false
               IgnoreNextEndClosingDoorsEvent = false

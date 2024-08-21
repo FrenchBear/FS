@@ -100,19 +100,20 @@ type PersonId = PersonId of int
 type Person =
     { Id: PersonId
       EntryFloor: Floor
-      ArrivalTime: Clock
+      ArrivalClock: Clock
       ExitFloor: Floor
-      EntryTime: Clock option
-      ExitTime: Clock option }
+      EntryClock: Clock option
+      ExitClock: Clock option }
 
-    member private this.calcTime(endTime: Clock option) =
-        assert (endTime.IsSome)
-        let (Clock iArrival) = this.ArrivalTime
-        let (Clock iEndTime) = endTime.Value
+    // Calculate difference between Clock? parameter endTime and arrivalTime
+    member private this.timeSinceArrival(endClock: Clock option) =
+        assert (endClock.IsSome)
+        let (Clock iArrival) = this.ArrivalClock
+        let (Clock iEndTime) = endClock.Value
         iEndTime - iArrival
 
-    member this.waitForElevator() = this.calcTime this.EntryTime
-    member this.totalTransportation() = this.calcTime this.ExitTime
+    member this.waitForElevatorTime() = this.timeSinceArrival this.EntryClock
+    member this.totalTransportationTime() = this.timeSinceArrival this.ExitClock
 
 // ----------------------------------------
 // Cabin
@@ -135,8 +136,8 @@ type CabinState =
 
 type Cabin =
     { Floor: Floor
-      Motor: MotorState
-      Door: DoorState
+      MotorStatus: MotorState
+      DoorStatus: DoorState
       Direction: Direction
       CabinStatus: CabinState
       _StopRequested: bool array
@@ -178,14 +179,14 @@ type CabinStatistic =
     | StatEndSimulation
 
 type RunningStatus =
-    { LastMotorOn: Clock
-      LastMotorOff: Clock
+    { LastMotorOnClock: Clock
+      LastMotorOffClock: Clock
       IsMotorOn: bool
       MotorOnTime: int
       MotorOffTime: int
 
-      LastCabinBusy: Clock
-      LastCabinIdle: Clock
+      LastCabinBusyClock: Clock
+      LastCabinIdleClock: Clock
       IsCabinBusy: bool
       CabinBusyTime: int
       CabinIdleTime: int

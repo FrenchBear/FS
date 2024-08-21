@@ -40,7 +40,7 @@ type ElevatorsActor with
         assert (exit <> entry)
 
         if this.B.LogDetails.ShowEvents then
-            printfn "\nCalling elevator from level %A to go to level %A" entry exit
+            printfn "\nCalling elevator from %A to go to %A" entry exit
 
         // Keep a deep copy for final logging
         let originalCabin = this.Cabins[0].deepCopy ()
@@ -48,10 +48,10 @@ type ElevatorsActor with
         let cabin = this.Cabins[0]
 
         // Actually only do something if elevator is idle
-        // If elevator is busy, then at some point elevator will arrive      but: ToDo: when the cabin is busy and closing doors, if correct direction, we interrupt closing doors
+        // If elevator is busy, then at some point elevator will arrive
         if cabin.CabinStatus = Idle then
-            assert (cabin.Door = Closed)
-            assert (cabin.Motor = Off)
+            assert (cabin.DoorStatus = Closed)
+            assert (cabin.MotorStatus = Off)
             assert (cabin.Direction = NoDirection)
 
             // If we call elevator from the floor the cabin is currently waiting, then we just have to open doors
@@ -61,7 +61,7 @@ type ElevatorsActor with
                 this.Cabins[0] <-
                     { cabin with
                         CabinStatus = Busy
-                        Door = Opening }
+                        DoorStatus = Opening }
 
                 this.registerEvent
                     { ElevatorEvent.Clock = clk.addOffset this.B.Durations.OpeningDoorsDuration
@@ -77,7 +77,7 @@ type ElevatorsActor with
                 this.Cabins[0] <-
                     { cabin with
                         CabinStatus = Busy
-                        Motor = Accelerating
+                        MotorStatus = Accelerating
                         Direction = if (entry > cabin.Floor) then Up else Down }
 
                 this.registerEvent
@@ -91,15 +91,14 @@ type ElevatorsActor with
         // Entry is on current cabin floor, and the door is closing: we stop the closing, and switch to opening mode
         elif cabin.Floor=entry then
 
-            if cabin.Door = Closing then
+            if cabin.DoorStatus = Closing then
                 // Cabin is closing doors, so we cancel current event, and register a doors opening event with correct amount of time
                 // Since it's complex to find next elevator event in the queue (there could be person events before), do it in a separate function
                 this.recordStat clk 0 StatClosingDoorsInterrupted
 
-                //let remainigTime = this.CancelClosingDoorEvent clk
                 let remainigTime = this.getEndClosingDoorEventRemainingTime clk
 
-                this.Cabins[0] <- { cabin with Door = Opening; IgnoreNextEndClosingDoorsEvent=true } // Door is now opening, we'll ignore coming EndClosingDoorsEvent
+                this.Cabins[0] <- { cabin with DoorStatus = Opening; IgnoreNextEndClosingDoorsEvent=true } // Door is now opening, we'll ignore coming EndClosingDoorsEvent
 
                 // And we register a new EndOpeningDoors event for the cabin
                 this.registerEvent
