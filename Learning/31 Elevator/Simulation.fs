@@ -14,7 +14,7 @@ module Simulation
 let runSimulation (b: DataBag) =
     let elevatorsActor = ElevatorsActor.createNew b
     let personsActor = PersonsActor.createNew b elevatorsActor
-    elevatorsActor.Persons <- Some personsActor
+    elevatorsActor.Persons <- Some personsActor     // because of mutual cross-reference between elevatorsActor and personsActor
 
     if b.LogDetails.ShowLog then
         printfn ""
@@ -65,6 +65,7 @@ let runSimulation (b: DataBag) =
 
     let sw = System.Diagnostics.Stopwatch.StartNew()
     elevatorsActor.initialize ()
+    personsActor.initialize()
     let (Clock iClk), eventCount, ps, es, tp = processNextEvent (Clock 0) 0
     sw.Stop()
 

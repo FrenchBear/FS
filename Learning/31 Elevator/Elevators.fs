@@ -1,6 +1,6 @@
 ﻿// 31 Elevator
 // Elevator simulation in F#
-// Basic event processing, "business logic" moved to a separate module
+// Basic elevator event processing, "business logic" moved to a separate module
 //
 // 2014-08-15   PV
 
@@ -8,6 +8,24 @@
 module ElevatorsModule
 
 type ElevatorsActor with
+
+    static member createNew b =
+        let cabinInitialState =
+            { Floor = Floor 0
+              MotorStatus = Off
+              Direction = NoDirection
+              DoorStatus = Closed
+              CabinStatus = Idle
+              _StopRequested = Array.create b.SimulationElevators.Levels false
+              IgnoreNextEndClosingDoorsEvent = false
+              Capacity = b.SimulationElevators.Capacity
+              Persons = [] }
+
+        { B = b
+          Cabins = Array.create b.SimulationElevators.NumberOfCabins cabinInitialState
+          Statistics = Array.create b.SimulationElevators.NumberOfCabins []
+          Landings = { Landings._Persons = [| for i in 0 .. b.SimulationElevators.Levels - 1 -> [] |] }
+          Persons = None }
 
     member this.initialize() =
         let cz = Clock 0
@@ -32,11 +50,11 @@ type ElevatorsActor with
 
         // Keep a deep copy for final logging
         let originalCabin = this.Cabins[0].deepCopy ()
+        let cabin = this.Cabins[0]
 
         match evt.Event with
 
         | EndAcceleration ->
-            let cabin = this.Cabins[0]
             assert (cabin.MotorStatus = Accelerating)
             assert (cabin.DoorStatus = Closed)
             assert (cabin.Direction <> NoDirection)
@@ -51,7 +69,6 @@ type ElevatorsActor with
             this.Cabins[0] <- { cabin with MotorStatus = FullSpeed }
 
         | Decision ->
-            let cabin = this.Cabins[0]
             assert (cabin.MotorStatus = FullSpeed)
             assert (cabin.DoorStatus = Closed)
             assert (cabin.Direction <> NoDirection)
@@ -67,7 +84,6 @@ type ElevatorsActor with
             this.registerEvent decisionEvt
 
         | EndMovingFullSpeed ->
-            let cabin = this.Cabins[0]
             assert (cabin.MotorStatus = FullSpeed)
             assert (cabin.DoorStatus = Closed)
             assert (cabin.Direction <> NoDirection)
@@ -80,10 +96,12 @@ type ElevatorsActor with
                   CreatedOn = clk }
 
             this.recordStat clk 0 StatMotorDecelerating
-            this.Cabins[0] <- { cabin with MotorStatus = Decelerating }
+
+            this.Cabins[0] <-
+                { cabin with
+                    MotorStatus = Decelerating }
 
         | EndDeceleration ->
-            let cabin = this.Cabins[0]
             assert (cabin.MotorStatus = Decelerating)
             assert (cabin.DoorStatus = Closed)
             assert (cabin.Direction <> NoDirection)
@@ -141,7 +159,6 @@ type ElevatorsActor with
 
             let allowMoveOut () =
                 // If there's still in the cabin a person that needs to get out, then give it 3 seconds to move out
-                let cabin = this.Cabins[0]
                 let ix = List.tryFindIndexBack (fun p -> p.ExitFloor = cabin.Floor) cabin.Persons
 
                 match ix with
@@ -173,8 +190,6 @@ type ElevatorsActor with
 
             let allowMoveIn () =
                 // If there's still a person on the floor that want to enter, give it 3 seconds to move in
-                let cabin = this.Cabins[0]
-
                 let rec processPersonGoingInSameDirectionAsCabin lst =
                     if List.length cabin.Persons = cabin.Capacity then
                         if doorsJustOpening then
@@ -217,8 +232,8 @@ type ElevatorsActor with
                                       Event = EndOpeningDoors
                                       CreatedOn = clk }
 
-                                true // Indicates that a person moved in, so when it's done, we must check again later (once this person has moved in) 
-                                     // whether another person is candidate to move in before starting motor
+                                true // Indicates that a person moved in, so when it's done, we must check again later (once this person has moved in)
+                            // whether another person is candidate to move in before starting motor
 
                             else
                                 processPersonGoingInSameDirectionAsCabin remainingPersons
@@ -226,7 +241,6 @@ type ElevatorsActor with
                 // Use List.rev to make sure that the person who arrived first on the landing enters first in the cabin
                 processPersonGoingInSameDirectionAsCabin (List.rev (this.Landings.getPersons cabin.Floor))
 
-            let cabin = this.Cabins[0]
             assert (cabin.MotorStatus = Off)
             assert (cabin.DoorStatus = Opening || cabin.DoorStatus = Open)
             assert (cabin.CabinStatus = Busy)
@@ -249,10 +263,11 @@ type ElevatorsActor with
                           CreatedOn = clk }
 
         | EndClosingDoors when this.Cabins[0].IgnoreNextEndClosingDoorsEvent ->
-            this.Cabins[0] <- { this.Cabins[0] with IgnoreNextEndClosingDoorsEvent=false }
+            this.Cabins[0] <-
+                { cabin with
+                    IgnoreNextEndClosingDoorsEvent = false }
 
         | EndClosingDoors ->
-            let cabin = this.Cabins[0]
             assert (cabin.MotorStatus = Off)
             assert (cabin.DoorStatus = Closing)
             assert (cabin.CabinStatus = Busy)
@@ -269,12 +284,15 @@ type ElevatorsActor with
                 assert (this.Cabins[0].Persons.IsEmpty)
 
                 // Ok, we checked to be sure that nobody is waiting, elevator goes into idle state
-                this.Cabins[0] <- { this.Cabins[0] with CabinStatus = Idle }
+                this.Cabins[0] <-
+                    { this.Cabins[0] with
+                        CabinStatus = Idle }
+
                 this.recordStat clk 0 StatCabinIdle
 
             | _ ->
                 this.Cabins[0] <-
-                    { this.Cabins[0] with       // Beware, cabin has already been updated...
+                    { this.Cabins[0] with // Beware, cabin has already been updated...
                         MotorStatus = Accelerating }
 
                 this.registerEvent

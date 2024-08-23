@@ -12,14 +12,13 @@ open System.Linq
 
 type PersonsActor with
     static member createNew b elevators =
-        let newPersons =
-            { B = b
-              //PersonEventsQueue = new System.Collections.Generic.PriorityQueue<PersonEvent, Clock>()
-              TransportedPersons = new System.Collections.Generic.List<Person>()
-              Elevators = elevators }
+        { B = b
+          TransportedPersons = new System.Collections.Generic.List<Person>()
+          Elevators = elevators }
 
+    member this.initialize() =
         let personsArray =
-            match b.SimulationPersons with
+            match this.B.SimulationPersons with
             | SimulationPersonsArray pa -> pa
             | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) ->
                 let rndPersons = ParkMillerRandom.createNew randomSeed
@@ -29,18 +28,18 @@ type PersonsActor with
                         match algorithm with
                         | Ground50Levels50 ->
                             if rndPersons.randInt 0 1 = 0 then
-                                Floor 0, Floor(rndPersons.randInt 1 (b.SimulationElevators.Levels-1))
+                                Floor 0, Floor(rndPersons.randInt 1 (this.B.SimulationElevators.Levels - 1))
                             else
-                                Floor(rndPersons.randInt 1 (b.SimulationElevators.Levels-1)), Floor 0
+                                Floor(rndPersons.randInt 1 (this.B.SimulationElevators.Levels - 1)), Floor 0
 
                         | FullRandom ->
-                            Floor(rndPersons.randInt 0 (b.SimulationElevators.Levels-1)),
-                            Floor(rndPersons.randInt 0 (b.SimulationElevators.Levels-1))
+                            Floor(rndPersons.randInt 0 (this.B.SimulationElevators.Levels - 1)),
+                            Floor(rndPersons.randInt 0 (this.B.SimulationElevators.Levels - 1))
 
                     if entry = exit then
                         getRandomPerson ()
                     else
-                        let arrival = Clock(rndPersons.randInt 0 (arrivalLength-1))
+                        let arrival = Clock(rndPersons.randInt 0 (arrivalLength - 1))
 
                         { Id = PersonId 0
                           EntryFloor = entry
@@ -59,7 +58,7 @@ type PersonsActor with
                        { tempPersonsArray[i] with
                            Id = PersonId(i + 1) } |]
 
-        if b.LogDetails.ShowInitialPersons then
+        if this.B.LogDetails.ShowInitialPersons then
             printfn "\nPersons for the simulation"
 
             for p in personsArray do
@@ -70,17 +69,11 @@ type PersonsActor with
                 { PersonEvent.Clock = p.ArrivalClock
                   Person = p
                   Event = Arrival
-                  CreatedOn = p.ArrivalClock
-                }
+                  CreatedOn = p.ArrivalClock }
 
-            b.EventsQueue.Enqueue(PersonEvent evt, evt.Clock)
-
-        newPersons
-
+            this.B.EventsQueue.Enqueue(PersonEvent evt, evt.Clock)
 
     member this.processEvent clk (evt: PersonEvent) =
-        //let evt = this.PersonEventsQueue.Dequeue()
-
         if this.B.LogDetails.ShowEvents then
             Logging.logMessage this.B evt.Clock $"Person evt: {evt}"
 
@@ -98,8 +91,7 @@ type PersonsActor with
             Logging.logPersonExit this.B clk evt.Person
 
 
-    member this.getTransportedPersons () = 
-        this.TransportedPersons
+    member this.getTransportedPersons() = this.TransportedPersons
 
 
     member this.printDetailedPersonStats() =
@@ -127,24 +119,28 @@ type PersonsActor with
         let ls = List.ofSeq this.TransportedPersons
 
         let avgWaitForElevator =
-            if List.length ls = 0
-            then 0.0
-            else double (ls |> List.sumBy (fun p -> p.waitForElevatorTime ())) / double (List.length ls)
+            if List.length ls = 0 then
+                0.0
+            else
+                ls |> List.map (fun p -> double (p.waitForElevatorTime ())) |> List.average
 
         let avgTotalTransport =
-            if List.length ls = 0
-            then 0.0
-            else double (ls |> List.sumBy (fun p -> p.totalTransportationTime ())) / double (List.length ls)
+            if List.length ls = 0 then
+                0.0
+            else
+                ls |> List.map (fun p -> double (p.totalTransportationTime ())) |> List.average
 
         let maxWaitForElevator =
-            if List.length ls = 0 
-            then 0
-            else ls |> List.map (fun p -> p.waitForElevatorTime ()) |> List.max
+            if List.length ls = 0 then
+                0
+            else
+                ls |> List.map (fun p -> p.waitForElevatorTime ()) |> List.max
 
         let maxTotalTransport =
-            if List.length ls = 0 
-            then 0
-            else ls |> List.map (fun p -> p.totalTransportationTime ()) |> List.max
+            if List.length ls = 0 then
+                0
+            else
+                ls |> List.map (fun p -> p.totalTransportationTime ()) |> List.max
 
         // Return a PersonsStats record
         { AvgWaitForElevator = avgWaitForElevator

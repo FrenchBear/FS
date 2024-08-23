@@ -13,7 +13,6 @@
 		<Compile Include="ParkMillerRandom.fs" />
 		<Compile Include="Types.fs" />
 		<Compile Include="Logging.fs" />
-		<Compile Include="ElevatorHelpers.fs" />
 		<Compile Include="ElevatorBusinessLogic.fs" />
 		<Compile Include="Elevators.fs" />
 		<Compile Include="Persons.fs" />
