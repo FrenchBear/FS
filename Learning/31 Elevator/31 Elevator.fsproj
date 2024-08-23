@@ -15,8 +15,8 @@
 		<Compile Include="Logging.fs" />
 		<Compile Include="ElevatorHelpers.fs" />
 		<Compile Include="ElevatorBusinessLogic.fs" />
-		<Compile Include="Elevator.fs" />
-		<Compile Include="Person.fs" />
+		<Compile Include="Elevators.fs" />
+		<Compile Include="Persons.fs" />
 		<Compile Include="Simulation.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>

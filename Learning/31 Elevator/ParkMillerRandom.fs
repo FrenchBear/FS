@@ -1,5 +1,5 @@
 ﻿// ParMillerRandom.fs
-// A simple random number generator producing 31 bits of randomness
+// Personal random generator, a linear congruential generator producing 31-bit random integers to use in languages comparisons
 // F# version without tests
 //
 // 2024-08-18    PV

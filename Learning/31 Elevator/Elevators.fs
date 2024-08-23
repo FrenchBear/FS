@@ -63,9 +63,8 @@ type ElevatorsActor with
             this.Cabins[0] <- { cabin with Floor = nf.Value }
 
             // Some business logic to decide whether cabin should start decelerating and stop at this floor, or continue full speed to next floor (and take decision again)
-            let evt = this.getDecisionEvent clk
-
-            this.registerEvent evt
+            let decisionEvt = this.getDecisionEvent clk
+            this.registerEvent decisionEvt
 
         | EndMovingFullSpeed ->
             let cabin = this.Cabins[0]
@@ -116,7 +115,7 @@ type ElevatorsActor with
                     else
                         checkRequestsOneDirection fl direction
 
-            let rec checkRequests (floor: Floor) direction =
+            let checkRequests (floor: Floor) direction =
                 assert (direction <> NoDirection)
 
                 if checkRequestsOneDirection floor direction then
@@ -174,7 +173,6 @@ type ElevatorsActor with
 
             let allowMoveIn () =
                 // If there's still a person on the floor that want to enter, give it 3 seconds to move in
-                // First version, ignoring capacity
                 let cabin = this.Cabins[0]
 
                 let rec processPersonGoingInSameDirectionAsCabin lst =
@@ -219,8 +217,8 @@ type ElevatorsActor with
                                       Event = EndOpeningDoors
                                       CreatedOn = clk }
 
-                                true // Indicates that a person moved in, so when it's done, we must check again whether another
-                            // person is candidate to move in before starting motor
+                                true // Indicates that a person moved in, so when it's done, we must check again later (once this person has moved in) 
+                                     // whether another person is candidate to move in before starting motor
 
                             else
                                 processPersonGoingInSameDirectionAsCabin remainingPersons
@@ -276,7 +274,7 @@ type ElevatorsActor with
 
             | _ ->
                 this.Cabins[0] <-
-                    { this.Cabins[0] with
+                    { this.Cabins[0] with       // Beware, cabin has already been updated...
                         MotorStatus = Accelerating }
 
                 this.registerEvent
