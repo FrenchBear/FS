@@ -2,21 +2,47 @@
 // Learning F#, Elevator simulation
 // Main module, simulations tests and examples
 //
-// 2024-08-13   PV      First version, only 1 cabin
-
+// 2024-08-13   PV      First version
+//
 // "Main" module, Run the simulation
 // In charge of master clock progression
 
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
-//let rndPersons = UniformUntRandom.createNew 1
-//let mutable rmax = 0
-//for i in 1..1000000 do
-//    rmax <- max rmax (rndPersons.nextValue())
-//printfn "%d" rmax
 
-//System.Diagnostics.Debugger.Break()
+let testSimple1 () =
+
+    let persone = [|
+        { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 10; EntryClock = None; ExitClock = None }
+    |]
+
+    // Create DataBag
+    let b =
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+          SimulationElevators =
+            { Levels = 6
+              NumberOfCabins = 1
+              Capacity = 6 }
+          SimulationPersons = SimulationPersonsArray persone
+          //LogDetails = standardLogDetails
+          LogDetails = { 
+              ShowLog = true
+              ShowEvents = true
+              ShowInitialPersons = true
+              ShowDetailedPersonStats = true
+              ShowDetailedElevatorStatRecords = true }
+          Durations = standardDurations
+          }
+
+    let res = runSimulation b
+
+    PersonsActor.printPersonStats res.PersonsStats
+    ElevatorsActor.printElevatorStats res.ElevatorsStats
+    Simulation.printSimulationStats res.SimulationStats
+
+testSimple1 ()
+
 
 
 let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
@@ -54,7 +80,7 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
 
     //PersonsActor.printPersonStats res.PersonsStats
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
-    //printSimulationStats res.SimulationStats
+    //Simulation.printSimulationStats res.SimulationStats
 
 //testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 
@@ -85,7 +111,7 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
 
     //PersonsActor.printPersonStats res.PersonsStats
     //ElevatorsActor.printElevatorStats res.ElevatorsStats
-    //printSimulationStats res.SimulationStats
+    //Simulation.printSimulationStats res.SimulationStats
 
 //testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 
@@ -104,9 +130,9 @@ let testARandomSimulation () =
     let res = runSimulation b
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
-    printSimulationStats res.SimulationStats
+    Simulation.printSimulationStats res.SimulationStats
 
-testARandomSimulation ()
+// testARandomSimulation ()
 
 
 let testContinuousSimulation () =
@@ -170,7 +196,7 @@ let testDoorsClosingWhenAPersonArrives () =
 
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
-    printSimulationStats res.SimulationStats
+    Simulation.printSimulationStats res.SimulationStats
 
 //testDoorsClosingWhenAPersonArrives ()
 
