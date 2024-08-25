@@ -88,7 +88,7 @@ let printSimulationParameters b =
     | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) ->
         printfn "    Random persons to carry: %d, Algorithm: %A, Seed: %d" personsToCarry algorithm randomSeed
         printfn "    Arrival duration:        %d" arrivalLength
-    | SimulationPersonsArray ap -> printfn "    Fixed persons to carry:  %d" (Array.length ap)
+    | SimulationPersonsArray spa -> printfn "    Fixed persons to carry:  %d" (Array.length spa)
 
     printfn "  Elevators/Building"
     printfn "    Levels:                  %d" b.SimulationElevators.Levels
