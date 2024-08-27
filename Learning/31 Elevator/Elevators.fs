@@ -31,11 +31,11 @@ type ElevatorsActor with
         let cz = Clock 0
         Logging.logMessage this.B cz "Elevator On and ready"
         let cabin = this.Cabins[0]
-        assert (cabin.MotorStatus = Off)
-        assert (cabin.DoorStatus = Closed)
-        assert (cabin.Direction = NoDirection)
-        assert (cabin.CabinStatus = Idle)
-        assert (cabin.Floor = Floor 0)
+        assert (this.Cabins[0].MotorStatus = Off)
+        assert (this.Cabins[0].DoorStatus = Closed)
+        assert (this.Cabins[0].Direction = NoDirection)
+        assert (this.Cabins[0].CabinStatus = Idle)
+        assert (this.Cabins[0].Floor = Floor 0)
 
         this.recordStat cz 0 StatCabinIdle
         this.recordStat cz 0 StatMotorOff
@@ -46,19 +46,18 @@ type ElevatorsActor with
     member this.processEvent (clk: Clock) (evt: ElevatorEvent) =
 
         if this.B.LogDetails.ShowEvents then
-            logMessage this.B evt.Clock $"Elevator evt: {evt}, cabin: {this.Cabins[0]}"
+            logMessage this.B evt.Clock $"Elevator evt: {evt}, Cabins[0]: {this.Cabins[0]}"
 
         // Keep a deep copy for final logging
         let originalCabin = this.Cabins[0].deepCopy ()
-        let cabin = this.Cabins[0]
 
         match evt.Event with
 
         | EndAcceleration ->
-            assert (cabin.MotorStatus = Accelerating)
-            assert (cabin.DoorStatus = Closed)
-            assert (cabin.Direction <> NoDirection)
-            assert (cabin.CabinStatus = Busy)
+            assert (this.Cabins[0].MotorStatus = Accelerating)
+            assert (this.Cabins[0].DoorStatus = Closed)
+            assert (this.Cabins[0].Direction <> NoDirection)
+            assert (this.Cabins[0].CabinStatus = Busy)
 
             this.registerEvent
                 { ElevatorEvent.Clock = clk.addOffset this.B.Durations.FullSpeedBeforeDecisionDuration
@@ -66,28 +65,28 @@ type ElevatorsActor with
                   Event = Decision
                   CreatedOn = clk }
 
-            this.Cabins[0] <- { cabin with MotorStatus = FullSpeed }
+            this.Cabins[0] <- { this.Cabins[0] with MotorStatus = FullSpeed }
 
         | Decision ->
-            assert (cabin.MotorStatus = FullSpeed)
-            assert (cabin.DoorStatus = Closed)
-            assert (cabin.Direction <> NoDirection)
-            assert (cabin.CabinStatus = Busy)
+            assert (this.Cabins[0].MotorStatus = FullSpeed)
+            assert (this.Cabins[0].DoorStatus = Closed)
+            assert (this.Cabins[0].Direction <> NoDirection)
+            assert (this.Cabins[0].CabinStatus = Busy)
 
             // Update Position
-            let nf = cabin.Floor.nextFloor this.levels cabin.Direction
+            let nf = this.Cabins[0].Floor.nextFloor this.levels this.Cabins[0].Direction
             assert (nf.IsSome)
-            this.Cabins[0] <- { cabin with Floor = nf.Value }
+            this.Cabins[0] <- { this.Cabins[0] with Floor = nf.Value }
 
             // Some business logic to decide whether cabin should start decelerating and stop at this floor, or continue full speed to next floor (and take decision again)
             let decisionEvt = this.getDecisionEvent clk
             this.registerEvent decisionEvt
 
         | EndMovingFullSpeed ->
-            assert (cabin.MotorStatus = FullSpeed)
-            assert (cabin.DoorStatus = Closed)
-            assert (cabin.Direction <> NoDirection)
-            assert (cabin.CabinStatus = Busy)
+            assert (this.Cabins[0].MotorStatus = FullSpeed)
+            assert (this.Cabins[0].DoorStatus = Closed)
+            assert (this.Cabins[0].Direction <> NoDirection)
+            assert (this.Cabins[0].CabinStatus = Busy)
 
             this.registerEvent
                 { ElevatorEvent.Clock = clk.addOffset this.B.Durations.AccelerationDuration
@@ -98,14 +97,14 @@ type ElevatorsActor with
             this.recordStat clk 0 StatMotorDecelerating
 
             this.Cabins[0] <-
-                { cabin with
+                { this.Cabins[0] with
                     MotorStatus = Decelerating }
 
         | EndDeceleration ->
-            assert (cabin.MotorStatus = Decelerating)
-            assert (cabin.DoorStatus = Closed)
-            assert (cabin.Direction <> NoDirection)
-            assert (cabin.CabinStatus = Busy)
+            assert (this.Cabins[0].MotorStatus = Decelerating)
+            assert (this.Cabins[0].DoorStatus = Closed)
+            assert (this.Cabins[0].Direction <> NoDirection)
+            assert (this.Cabins[0].CabinStatus = Busy)
 
             this.recordStat clk 0 StatMotorOff
 
@@ -117,7 +116,7 @@ type ElevatorsActor with
                   CreatedOn = clk }
 
             // Clear the stop requested for current floor
-            cabin.clearStopRequested cabin.Floor
+            this.Cabins[0].clearStopRequested this.Cabins[0].Floor
 
             // Decide if we still continue with the same direction (returns true) or not (returns false)
             let rec checkRequestsOneDirection (floor: Floor) direction =
@@ -126,7 +125,7 @@ type ElevatorsActor with
                 match nf with
                 | None -> false
                 | Some fl ->
-                    if cabin.getStopRequested fl then
+                    if this.Cabins[0].getStopRequested fl then
                         true
                     elif not (List.isEmpty (this.Landings.getPersons fl)) then
                         true
@@ -146,10 +145,10 @@ type ElevatorsActor with
                     else
                         NoDirection
 
-            let newDirection = checkRequests cabin.Floor cabin.Direction
+            let newDirection = checkRequests this.Cabins[0].Floor this.Cabins[0].Direction
 
             this.Cabins[0] <-
-                { cabin with
+                { this.Cabins[0] with
                     Direction = newDirection
                     DoorStatus = Opening
                     MotorStatus = Off }
@@ -159,14 +158,14 @@ type ElevatorsActor with
 
             let allowMoveOut () =
                 // If there's still in the cabin a person that needs to get out, then give it 3 seconds to move out
-                let ix = List.tryFindIndexBack (fun p -> p.ExitFloor = cabin.Floor) cabin.Persons
+                let ix = List.tryFindIndexBack (fun p -> p.ExitFloor = this.Cabins[0].Floor) this.Cabins[0].Persons
 
                 match ix with
                 | None -> false
                 | Some i ->
-                    let p = cabin.Persons[i]
-                    let newPersons = List.removeAt i cabin.Persons
-                    this.Cabins[0] <- { cabin with Persons = newPersons }
+                    let p = this.Cabins[0].Persons[i]
+                    let newPersons = List.removeAt i this.Cabins[0].Persons
+                    this.Cabins[0] <- { this.Cabins[0] with Persons = newPersons }
 
                     // Elevator event to continue with next person moving out or in the elevator at current floor
                     this.registerEvent
@@ -191,7 +190,7 @@ type ElevatorsActor with
             let allowMoveIn () =
                 // If there's still a person on the floor that want to enter, give it 3 seconds to move in
                 let rec processPersonGoingInSameDirectionAsCabin lst =
-                    if List.length cabin.Persons = cabin.Capacity then
+                    if List.length this.Cabins[0].Persons = this.Cabins[0].Capacity then
                         if doorsJustOpening then
                             this.recordStat clk 0 StatUselessStop
 
@@ -202,28 +201,28 @@ type ElevatorsActor with
                         | p :: remainingPersons ->
 
                             let personGoesInSameDirectionAsCabin =
-                                if cabin.Direction = NoDirection then
+                                if this.Cabins[0].Direction = NoDirection then
                                     true // If cabin has no direction, then let 1st person enter, it will decide on cabin direction
                                 else
-                                    (cabin.Direction = Up && p.ExitFloor > cabin.Floor)
-                                    || (cabin.Direction = Down && p.ExitFloor < cabin.Floor)
+                                    (this.Cabins[0].Direction = Up && p.ExitFloor > this.Cabins[0].Floor)
+                                    || (this.Cabins[0].Direction = Down && p.ExitFloor < this.Cabins[0].Floor)
 
                             if (personGoesInSameDirectionAsCabin) then
                                 let updatedPerson = { p with EntryClock = Some clk }
-                                cabin.setStopRequested p.ExitFloor
+                                this.Cabins[0].setStopRequested p.ExitFloor
 
                                 let newDirection =
-                                    if cabin.Direction = NoDirection then
-                                        if p.ExitFloor > cabin.Floor then Up else Down
+                                    if this.Cabins[0].Direction = NoDirection then
+                                        if p.ExitFloor > this.Cabins[0].Floor then Up else Down
                                     else
-                                        cabin.Direction
+                                        this.Cabins[0].Direction
 
                                 this.Cabins[0] <-
-                                    { cabin with
-                                        Persons = updatedPerson :: cabin.Persons
+                                    { this.Cabins[0] with
+                                        Persons = updatedPerson :: this.Cabins[0].Persons
                                         Direction = newDirection }
 
-                                this.Landings.setPersons cabin.Floor remainingPersons
+                                this.Landings.setPersons this.Cabins[0].Floor remainingPersons
 
                                 // Elevator event to continue with next person moving out or in the elevator at current floor
                                 this.registerEvent
@@ -239,21 +238,21 @@ type ElevatorsActor with
                                 processPersonGoingInSameDirectionAsCabin remainingPersons
 
                 // Use List.rev to make sure that the person who arrived first on the landing enters first in the cabin
-                processPersonGoingInSameDirectionAsCabin (List.rev (this.Landings.getPersons cabin.Floor))
+                processPersonGoingInSameDirectionAsCabin (List.rev (this.Landings.getPersons this.Cabins[0].Floor))
 
-            assert (cabin.MotorStatus = Off)
-            assert (cabin.DoorStatus = Opening || cabin.DoorStatus = Open)
-            assert (cabin.CabinStatus = Busy)
+            assert (this.Cabins[0].MotorStatus = Off)
+            assert (this.Cabins[0].DoorStatus = Opening || this.Cabins[0].DoorStatus = Open)
+            assert (this.Cabins[0].CabinStatus = Busy)
 
-            if cabin.DoorStatus = Opening then
+            if this.Cabins[0].DoorStatus = Opening then
                 this.recordStat clk 0 StatDoorsOpen
 
-            this.Cabins[0] <- { cabin with DoorStatus = Open }
+            this.Cabins[0] <- { this.Cabins[0] with DoorStatus = Open }
 
             if not (allowMoveOut ()) then
                 if not (allowMoveIn ()) then
                     // Nobody remaining to move out or move in, we can close the doors
-                    this.Cabins[0] <- { cabin with DoorStatus = Closing }
+                    this.Cabins[0] <- { this.Cabins[0] with DoorStatus = Closing }
                     this.recordStat clk 0 (StatPersonsInCabin(List.length this.Cabins[0].Persons))
 
                     this.registerEvent
@@ -264,21 +263,21 @@ type ElevatorsActor with
 
         | EndClosingDoors when this.Cabins[0].IgnoreNextEndClosingDoorsEvent ->
             this.Cabins[0] <-
-                { cabin with
+                { this.Cabins[0] with
                     IgnoreNextEndClosingDoorsEvent = false }
 
         | EndClosingDoors ->
-            assert (cabin.MotorStatus = Off)
-            assert (cabin.DoorStatus = Closing)
-            assert (cabin.CabinStatus = Busy)
+            assert (this.Cabins[0].MotorStatus = Off)
+            assert (this.Cabins[0].DoorStatus = Closing)
+            assert (this.Cabins[0].CabinStatus = Busy)
 
-            this.Cabins[0] <- { cabin with DoorStatus = Closed }
+            this.Cabins[0] <- { this.Cabins[0] with DoorStatus = Closed }
             this.recordStat clk 0 StatDoorsClosed
 
-            match cabin.Direction with
+            match this.Cabins[0].Direction with
             | NoDirection ->
                 for l in 0 .. this.levels - 1 do
-                    assert (not (cabin.getStopRequested (Floor l)))
+                    assert (not (this.Cabins[0].getStopRequested (Floor l)))
                     assert ((this.Landings.getPersons (Floor l)).IsEmpty)
 
                 assert (this.Cabins[0].Persons.IsEmpty)
