@@ -115,13 +115,13 @@ let testARandomSimulation () =
         { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
           SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, Ground50Levels50) 
-          //LogDetails = { standardLogDetails with ShowEvents=false }
-          LogDetails = { 
-              ShowLog = true
-              ShowEvents = true
-              ShowInitialPersons = false
-              ShowDetailedPersonStats = true
-              ShowDetailedElevatorStatRecords = true }
+          LogDetails = { standardLogDetails with ShowInitialPersons=false }
+          //LogDetails = { 
+          //    ShowLog = true
+          //    ShowEvents = true
+          //    ShowInitialPersons = false
+          //    ShowDetailedPersonStats = true
+          //    ShowDetailedElevatorStatRecords = true }
           Durations = standardDurations
         }
 

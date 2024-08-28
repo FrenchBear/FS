@@ -62,7 +62,8 @@ type PersonsActor with
             printfn "\nPersons for the simulation"
 
             for p in personsArray do
-                printfn "%0A" p
+                //printfn "%0A" p
+                printfn "%s" (p.ToString())     // ToString for comparison with C#
 
         for p in personsArray do
             let evt =

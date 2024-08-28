@@ -2,7 +2,8 @@
 // Elevator simulation in F#
 // Module Types, first module loaded, define constants and types
 //
-// 2014-08-15   PV
+// 2024-08-15   PV
+// 2024-08-28   PV      ClockPriority as PriorityQueue priority to simplify code
 
 [<AutoOpen>]
 module Types
@@ -116,6 +117,20 @@ type Person =
 
     member this.waitForElevatorTime() = this.timeSinceArrival this.EntryClock
     member this.totalTransportationTime() = this.timeSinceArrival this.ExitClock
+
+    // For C# comparisons
+    override this.ToString() =
+        let (PersonId iId) = this.Id
+        let sEntryClock =
+            match this.EntryClock with
+            | None -> ""
+            | Some clk -> sprintf "%0A" clk
+        let sExitClock =
+            match this.ExitClock with
+            | None -> ""
+            | Some clk -> sprintf "%0A" clk
+
+        $"Person {{ Id = Person {iId}, EntryFloor = {this.EntryFloor}, ArrivalClock = {this.ArrivalClock}, ExitFloor = {this.ExitFloor}, EntryClock = {sEntryClock}, ExitClock = {sExitClock} }}"
 
 // ----------------------------------------
 // Cabin
@@ -267,6 +282,8 @@ type SimulationPersons =
         algorithm: RandomPersonsAlgorithm
 
 
+// Type used for PriorityQueue priority; it's clock + [priority 0 (higher) for persons or priority 1 for elevators]
+// So scheduler will get directly next event with lowest value of clock and priority
 [<CustomEquality; CustomComparison>]
 type ClockPriority =
     { Clock: Clock
@@ -337,10 +354,10 @@ type DataBag =
       LogDetails: LogDetails
       Durations: Durations }
 
-    member this.Enqueue (evt:CommonEvent) =
+    member this.Enqueue(evt: CommonEvent) =
         match evt with
-        | ElevatorEvent ee -> this.EventsQueue.Enqueue(evt, {Clock=ee.Clock; Priority=1})
-        | PersonEvent pe -> this.EventsQueue.Enqueue(evt, {Clock=pe.Clock; Priority=1})
+        | ElevatorEvent ee -> this.EventsQueue.Enqueue(evt, { Clock = ee.Clock; Priority = 1 })
+        | PersonEvent pe -> this.EventsQueue.Enqueue(evt, { Clock = pe.Clock; Priority = 0 })       // Higher priority
 
 // ----------------------------------------
 // Actors

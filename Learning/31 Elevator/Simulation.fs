@@ -5,6 +5,7 @@
 // In charge of master clock progression
 //
 // 2014-08-15   PV
+// 2014-08-28   PV      Simplification with ClockPriority
 
 
 [<AutoOpen>]
@@ -40,33 +41,16 @@ let runSimulation (b: DataBag) =
             clk, eventCount, ps, es, tp
 
         else
-            let rec getComingEventsList lst =
-                let hasItem, _, clkPriPeek = b.EventsQueue.TryPeek()
+            let nextEvent = b.EventsQueue.Dequeue()
+            match nextEvent with
+            | PersonEvent pe ->
+                assert (pe.Clock = nextClkPri.Clock)
+                personsActor.processEvent nextClkPri.Clock pe
+            | ElevatorEvent ee ->
+                assert (ee.Clock = nextClkPri.Clock)
+                elevatorsActor.processEvent nextClkPri.Clock ee
 
-                if (not hasItem) || clkPriPeek > nextClkPri then
-                    lst
-                else
-                    let nextEvent = b.EventsQueue.Dequeue()
-
-                    let nep =
-                        match nextEvent with
-                        | PersonEvent pe -> nextEvent, 0
-                        | ElevatorEvent ee -> nextEvent, 1
-
-                    getComingEventsList (nep :: lst)
-
-            let nextEvents = (getComingEventsList []) |> List.sortBy (fun (_, pri) -> pri)
-
-            for (evt, _) in nextEvents do
-                match evt with
-                | PersonEvent pe ->
-                    assert (pe.Clock = nextClkPri.Clock)
-                    personsActor.processEvent nextClkPri.Clock pe
-                | ElevatorEvent ee ->
-                    assert (ee.Clock = nextClkPri.Clock)
-                    elevatorsActor.processEvent nextClkPri.Clock ee
-
-            processNextEvent nextClkPri.Clock (eventCount + List.length nextEvents)
+            processNextEvent nextClkPri.Clock (eventCount + 1)
 
     let sw = System.Diagnostics.Stopwatch.StartNew()
     elevatorsActor.initialize ()
