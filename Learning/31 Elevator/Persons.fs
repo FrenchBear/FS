@@ -71,11 +71,12 @@ type PersonsActor with
                   Event = Arrival
                   CreatedOn = p.ArrivalClock }
 
-            this.B.EventsQueue.Enqueue(PersonEvent evt, evt.Clock)
+            this.B.Enqueue (PersonEvent evt)
 
     member this.processEvent clk (evt: PersonEvent) =
         if this.B.LogDetails.ShowEvents then
-            Logging.logMessage this.B evt.Clock $"Person evt: {evt}"
+            let evtStr = sprintf "%0A" evt
+            Logging.logMessage this.B evt.Clock $"Person evt: {evtStr}"
 
         assert (clk = evt.Clock)
 

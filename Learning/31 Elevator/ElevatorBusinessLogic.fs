@@ -13,17 +13,17 @@ type ElevatorsActor with
         this.Statistics[ixCabin] <- (clk, stat) :: this.Statistics[ixCabin]
 
     member this.registerEvent evt =
-        this.B.EventsQueue.Enqueue(ElevatorEvent evt, evt.Clock)
+        this.B.EventsQueue.Enqueue(ElevatorEvent evt, {Clock= evt.Clock; Priority=1})
 
     member this.getEndClosingDoorEventRemainingTime clk =
-        let rec findEndClosingDoorsEvent (lst: (struct (CommonEvent * Clock)) list) =
-            let hasItem, _, nextClk = this.B.EventsQueue.TryPeek()
+        let rec findEndClosingDoorsEvent (lst: (struct (CommonEvent * ClockPriority)) list) =
+            let hasItem, _, nextClkPri = this.B.EventsQueue.TryPeek()
 
             if not hasItem then
                 lst, 0
             else
                 let nextEvent = this.B.EventsQueue.Dequeue()
-                let st: struct (CommonEvent * Clock) = (nextEvent, nextClk)
+                let st: struct (CommonEvent * ClockPriority) = (nextEvent, nextClkPri)
 
                 match nextEvent with
                 | PersonEvent pe -> findEndClosingDoorsEvent (st :: lst)
@@ -43,6 +43,8 @@ type ElevatorsActor with
     // When a person has just arrived
     member this.callElevator (clk: Clock) (entry: Floor) (exit: Floor) =
         assert (exit <> entry)
+
+        //if clk=Clock 775 then System.Diagnostics.Debugger.Break()
 
         if this.B.LogDetails.ShowEvents then
             printfn "\nCalling elevator from %A to go to %A" entry exit

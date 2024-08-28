@@ -14,16 +14,18 @@ module Simulation
 let runSimulation (b: DataBag) =
     let elevatorsActor = ElevatorsActor.createNew b
     let personsActor = PersonsActor.createNew b elevatorsActor
-    elevatorsActor.Persons <- Some personsActor     // because of mutual cross-reference between elevatorsActor and personsActor
+    elevatorsActor.Persons <- Some personsActor // because of mutual cross-reference between elevatorsActor and personsActor
 
     if b.LogDetails.ShowLog then
         printfn ""
 
     let rec processNextEvent (clk: Clock) eventCount =
-        let hasItem,_,nextClk = b.EventsQueue.TryPeek()
+        let hasItem, _, nextClkPri = b.EventsQueue.TryPeek()
 
-        if not hasItem
-        then
+        //if clk > Clock 1590 then
+        //    System.Diagnostics.Debugger.Break()
+
+        if not hasItem then
             let (Clock iClk) = clk
 
             if b.LogDetails.ShowLog then
@@ -39,33 +41,36 @@ let runSimulation (b: DataBag) =
 
         else
             let rec getComingEventsList lst =
-                let hasItem,_,clkPeek = b.EventsQueue.TryPeek()
-                if (not hasItem) || clkPeek>nextClk
-                then lst
+                let hasItem, _, clkPriPeek = b.EventsQueue.TryPeek()
+
+                if (not hasItem) || clkPriPeek > nextClkPri then
+                    lst
                 else
                     let nextEvent = b.EventsQueue.Dequeue()
+
                     let nep =
                         match nextEvent with
                         | PersonEvent pe -> nextEvent, 0
                         | ElevatorEvent ee -> nextEvent, 1
-                    getComingEventsList (nep::lst)
-                        
+
+                    getComingEventsList (nep :: lst)
+
             let nextEvents = (getComingEventsList []) |> List.sortBy (fun (_, pri) -> pri)
 
             for (evt, _) in nextEvents do
                 match evt with
-                | PersonEvent pe -> 
-                    assert (pe.Clock=nextClk)
-                    personsActor.processEvent nextClk pe
-                | ElevatorEvent ee -> 
-                    assert (ee.Clock=nextClk)
-                    elevatorsActor.processEvent nextClk ee
+                | PersonEvent pe ->
+                    assert (pe.Clock = nextClkPri.Clock)
+                    personsActor.processEvent nextClkPri.Clock pe
+                | ElevatorEvent ee ->
+                    assert (ee.Clock = nextClkPri.Clock)
+                    elevatorsActor.processEvent nextClkPri.Clock ee
 
-            processNextEvent nextClk (eventCount + List.length nextEvents)
+            processNextEvent nextClkPri.Clock (eventCount + List.length nextEvents)
 
     let sw = System.Diagnostics.Stopwatch.StartNew()
     elevatorsActor.initialize ()
-    personsActor.initialize()
+    personsActor.initialize ()
     let (Clock iClk), eventCount, ps, es, tp = processNextEvent (Clock 0) 0
     sw.Stop()
 

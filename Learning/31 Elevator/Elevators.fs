@@ -46,7 +46,9 @@ type ElevatorsActor with
     member this.processEvent (clk: Clock) (evt: ElevatorEvent) =
 
         if this.B.LogDetails.ShowEvents then
-            logMessage this.B evt.Clock $"Elevator evt: {evt}, Cabins[0]: {this.Cabins[0]}"
+            let evtStr = sprintf "%0A" evt
+            let cabStr = sprintf "%0A" this.Cabins[0]
+            logMessage this.B evt.Clock $"Elevator evt: {evtStr}, Cabins[0]: {cabStr}"
 
         // Keep a deep copy for final logging
         let originalCabin = this.Cabins[0].deepCopy ()
@@ -183,7 +185,7 @@ type ElevatorsActor with
                           Event = ExitCabin
                           CreatedOn = clk }
 
-                    this.B.EventsQueue.Enqueue(PersonEvent evt2, evt2.Clock)
+                    this.B.Enqueue (PersonEvent evt2)
 
                     true // Indicates that a person has moved out, so we shouldn't call allowMoveIn yet
 

@@ -7,6 +7,8 @@
 [<AutoOpen>]
 module Types
 
+open System
+
 // ----------------------------------------------------------------------------
 // Simulation parameters
 
@@ -264,13 +266,81 @@ type SimulationPersons =
         randomSeed: int *
         algorithm: RandomPersonsAlgorithm
 
+
+[<CustomEquality; CustomComparison>]
+type ClockPriority =
+    { Clock: Clock
+      Priority: int }
+
+    interface IEquatable<ClockPriority> with
+        member this.Equals other =
+            this.Clock.Equals other.Clock && this.Priority.Equals other.Priority
+
+    override this.Equals other =
+        match other with
+        | :? ClockPriority as p -> (this :> IEquatable<_>).Equals p
+        | _ -> false
+
+    override this.GetHashCode() =
+        this.Clock.GetHashCode() ^^^ this.Priority.GetHashCode()
+
+
+    interface IComparable<ClockPriority> with
+        member this.CompareTo other =
+            let (Clock iClkThis) = this.Clock
+            let (Clock iClkOther) = other.Clock
+            let res = iClkThis.CompareTo iClkOther
+            // Compare on clock first, and if clocks are the same, compare on priority
+            if res = 0 then
+                this.Priority.CompareTo other.Priority
+            else
+                res
+
+    interface IComparable with
+        member this.CompareTo other =
+            match other with
+            | :? ClockPriority as p -> (this :> IComparable<_>).CompareTo p
+            | _ -> -1
+
+(*
+printfn "Test ClockPriority"
+let cp12_0 = { Clock = Clock 12; Priority = 0 }
+let cp23_0 = { Clock = Clock 23; Priority = 0 }
+let cp23_1 = { Clock = Clock 23; Priority = 1 }
+let cp23_2 = { Clock = Clock 23; Priority = 2 }
+let cp30_1 = { Clock = Clock 30; Priority = 1 }
+
+let pq = new System.Collections.Generic.PriorityQueue<String, ClockPriority>()
+
+pq.Enqueue("cp23_2", cp23_2)
+pq.Enqueue("cp12_0", cp12_0)
+pq.Enqueue("cp30_1", cp30_1)
+pq.Enqueue("cp23_0", cp23_0)
+pq.Enqueue("cp23_1", cp23_1)
+
+let rec printQueue (q: System.Collections.Generic.PriorityQueue<String, ClockPriority>) =
+    if q.Count = 0 then
+        ()
+    else
+        let cp = q.Dequeue()
+        printfn "%0A" cp
+        printQueue q
+
+printQueue pq
+printfn ""
+*)
+
 type DataBag =
-    { EventsQueue: System.Collections.Generic.PriorityQueue<CommonEvent, Clock>
+    { EventsQueue: System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>
       SimulationElevators: SimulationElevators
       SimulationPersons: SimulationPersons
       LogDetails: LogDetails
       Durations: Durations }
 
+    member this.Enqueue (evt:CommonEvent) =
+        match evt with
+        | ElevatorEvent ee -> this.EventsQueue.Enqueue(evt, {Clock=ee.Clock; Priority=1})
+        | PersonEvent pe -> this.EventsQueue.Enqueue(evt, {Clock=pe.Clock; Priority=1})
 
 // ----------------------------------------
 // Actors
@@ -294,7 +364,6 @@ and
 // ----------------------------------------
 // Simulation Results
 
-// ToDo: Add median values, and max for 95% of users
 type PersonsStats =
     { AvgWaitForElevator: float
       AvgTotalTransport: float

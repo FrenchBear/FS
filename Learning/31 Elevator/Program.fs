@@ -4,11 +4,8 @@
 //
 // 2024-08-13   PV      First version
 //
-// "Main" module, Run the simulation
-// In charge of master clock progression
+// Various tests
 
-System.Console.OutputEncoding <- System.Text.Encoding.UTF8
-printfn "Elevator simulation in F#\n"
 
 
 let testSimple1 () =
@@ -19,7 +16,7 @@ let testSimple1 () =
 
     // Create DataBag
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
           SimulationElevators =
             { Levels = 6
               NumberOfCabins = 1
@@ -41,8 +38,6 @@ let testSimple1 () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
-testSimple1 ()
-
 
 
 let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
@@ -62,7 +57,7 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
 
     // Create DataBag
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
           SimulationElevators =
             { Levels = 6
               NumberOfCabins = 1
@@ -78,11 +73,10 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
     assert (res.ElevatorsStats.LevelsCovered[0] = 3) // Then three levels again with an empty cabin, to go back floor 3->0 to take remaining persons
     assert (res.ElevatorsStats.LevelsCovered[4] = 3) // Final travel over 3 levels too, with 4 remaining persons
 
-    //PersonsActor.printPersonStats res.PersonsStats
-    //ElevatorsActor.printElevatorStats res.ElevatorsStats
-    //Simulation.printSimulationStats res.SimulationStats
+    PersonsActor.printPersonStats res.PersonsStats
+    ElevatorsActor.printElevatorStats res.ElevatorsStats
+    Simulation.printSimulationStats res.SimulationStats
 
-//testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 
 
 let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
@@ -95,7 +89,7 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     |]
 
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
           SimulationElevators =
             { Levels = 6
               NumberOfCabins = 1
@@ -109,35 +103,41 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
 
     assert (res.ElevatorsStats.LevelsCovered[2] = 3) // Make sure that the two persons traveled together on 3 levels
 
-    //PersonsActor.printPersonStats res.PersonsStats
-    //ElevatorsActor.printElevatorStats res.ElevatorsStats
-    //Simulation.printSimulationStats res.SimulationStats
+    PersonsActor.printPersonStats res.PersonsStats
+    ElevatorsActor.printElevatorStats res.ElevatorsStats
+    Simulation.printSimulationStats res.SimulationStats
 
-//testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 
 
 // Just a random simulation
 let testARandomSimulation () =
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
           SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, Ground50Levels50) 
-          LogDetails = { standardLogDetails with ShowEvents=false }
+          //LogDetails = { standardLogDetails with ShowEvents=false }
+          LogDetails = { 
+              ShowLog = true
+              ShowEvents = true
+              ShowInitialPersons = false
+              ShowDetailedPersonStats = true
+              ShowDetailedElevatorStatRecords = true }
           Durations = standardDurations
         }
 
     printSimulationParameters b
+    
     let res = runSimulation b
+    
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
-// testARandomSimulation ()
 
 
 let testContinuousSimulation () =
     let refDataBag =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
           SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
           LogDetails = standardLogDetails
@@ -153,7 +153,6 @@ let testContinuousSimulation () =
         let s = int(res.PersonsStats.AvgWaitForElevator/350.0*80.0+0.5)
         printfn "%*c" s '*'
 
-//testContinuousSimulation ()
 
 
 let testDoorsClosingWhenAPersonArrives () =
@@ -166,7 +165,7 @@ let testDoorsClosingWhenAPersonArrives () =
     |]
 
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, Clock>()
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
           SimulationElevators =
             { Levels = 6
               NumberOfCabins = 1
@@ -198,7 +197,16 @@ let testDoorsClosingWhenAPersonArrives () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
-//testDoorsClosingWhenAPersonArrives ()
 
+
+System.Console.OutputEncoding <- System.Text.Encoding.UTF8
+printfn "Elevator simulation in F#\n"
+
+//testSimple1 ()
+//testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
+//testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+testARandomSimulation ()
+//testContinuousSimulation ()
+//testDoorsClosingWhenAPersonArrives ()
 
 printfn "\nDone."
