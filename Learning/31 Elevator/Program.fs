@@ -9,6 +9,7 @@
 
 
 let testSimple1 () =
+    printfn "\n---------------------------------------\nTest Simple #1\n"
 
     let persone = [|
         { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 10; EntryClock = None; ExitClock = None }
@@ -22,13 +23,13 @@ let testSimple1 () =
               NumberOfCabins = 1
               Capacity = 6 }
           SimulationPersons = SimulationPersonsArray persone
-          //LogDetails = standardLogDetails
-          LogDetails = { 
-              ShowLog = true
-              ShowEvents = true
-              ShowInitialPersons = true
-              ShowDetailedPersonStats = true
-              ShowDetailedElevatorStatRecords = true }
+          LogDetails = standardLogDetails
+          //LogDetails = { 
+          //    ShowLog = true
+          //    ShowEvents = true
+          //    ShowInitialPersons = true
+          //    ShowDetailedPersonStats = true
+          //    ShowDetailedElevatorStatRecords = true }
           Durations = standardDurations
           }
 
@@ -41,6 +42,7 @@ let testSimple1 () =
 
 
 let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
+    printfn "\n---------------------------------------\nTest 10 persons arriving together with cabin capacity 6\n"
 
     let tenPersonsArrivingAtTimeZero = [|
         { Id = PersonId 1; EntryFloor = Floor 0; ExitFloor = Floor 3; ArrivalClock = Clock 0; EntryClock = None; ExitClock = None }
@@ -80,6 +82,7 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
 
 
 let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
+    printfn "\n---------------------------------------\nTest with a person arriving just when cabin doors are about to close\n"
 
     // Person 2 arrives just when the door is about to close
     // Check that person events are processed before elevator events, so both persons are transported together
@@ -108,54 +111,9 @@ let testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     Simulation.printSimulationStats res.SimulationStats
 
 
-
-// Just a random simulation
-let testARandomSimulation () =
-    let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
-          SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, Ground50Levels50) 
-          LogDetails = { standardLogDetails with ShowInitialPersons=false }
-          //LogDetails = { 
-          //    ShowLog = true
-          //    ShowEvents = true
-          //    ShowInitialPersons = false
-          //    ShowDetailedPersonStats = true
-          //    ShowDetailedElevatorStatRecords = true }
-          Durations = standardDurations
-        }
-
-    printSimulationParameters b
-    
-    let res = runSimulation b
-    
-    PersonsActor.printPersonStats res.PersonsStats
-    ElevatorsActor.printElevatorStats res.ElevatorsStats
-    Simulation.printSimulationStats res.SimulationStats
-
-
-
-let testContinuousSimulation () =
-    let refDataBag =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
-          SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
-          LogDetails = standardLogDetails
-          Durations = standardDurations
-        }
-
-    printfn "\nContinuous random simulation of variable number of persons over 800s"
-    for np in 0..5..130 do
-        let b = {refDataBag with SimulationPersons = SimulationRandomGeneration(np, 800, 1, Ground50Levels50) }
-        let res = runSimulation b
-
-        printf "p=%3d: wait = %5.1f " np res.PersonsStats.AvgWaitForElevator
-        let s = int(res.PersonsStats.AvgWaitForElevator/350.0*80.0+0.5)
-        printfn "%*c" s '*'
-
-
-
 let testDoorsClosingWhenAPersonArrives () =
+    printfn "\n---------------------------------------\nTest Doors closing when a person arrives\n"
+
     // Person 2 arrives just when the door is closing, and person 3 1s later
     // Check that the closing door sequence is interrupted (ClosingDoors event is deleted) while both persons are maintained in the list
     let personsData = [|
@@ -198,15 +156,63 @@ let testDoorsClosingWhenAPersonArrives () =
     Simulation.printSimulationStats res.SimulationStats
 
 
+// Just a random long simulation
+let testARandomSimulation () =
+    printfn "\n---------------------------------------\nTest a random simulation\n"
+
+    let b =
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+          SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, Ground50Levels50) 
+          LogDetails = { standardLogDetails with ShowInitialPersons=false }
+          //LogDetails = { 
+          //    ShowLog = true
+          //    ShowEvents = true
+          //    ShowInitialPersons = false
+          //    ShowDetailedPersonStats = true
+          //    ShowDetailedElevatorStatRecords = true }
+          Durations = standardDurations
+        }
+
+    printSimulationParameters b
+    
+    let res = runSimulation b
+    
+    PersonsActor.printPersonStats res.PersonsStats
+    ElevatorsActor.printElevatorStats res.ElevatorsStats
+    Simulation.printSimulationStats res.SimulationStats
+
+
+
+let testContinuousSimulation () =
+    printfn "\n---------------------------------------\nTest continuous simulation\n"
+
+    let refDataBag =
+        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+          SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
+          LogDetails = standardLogDetails
+          Durations = standardDurations
+        }
+
+    printfn "\nContinuous random simulation of variable number of persons over 800s"
+    for np in 0..5..130 do
+        let b = {refDataBag with SimulationPersons = SimulationRandomGeneration(np, 800, 1, Ground50Levels50) }
+        let res = runSimulation b
+
+        printf "p=%3d: wait = %5.1f " np res.PersonsStats.AvgWaitForElevator
+        let s = int(res.PersonsStats.AvgWaitForElevator/350.0*80.0+0.5)
+        printfn "%*c" s '*'
+
 
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
-//testSimple1 ()
-//testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
-//testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+testSimple1 ()
+testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
+testWithAPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+testDoorsClosingWhenAPersonArrives ()
 testARandomSimulation ()
-//testContinuousSimulation ()
-//testDoorsClosingWhenAPersonArrives ()
+testContinuousSimulation ()
 
 printfn "\nDone."
