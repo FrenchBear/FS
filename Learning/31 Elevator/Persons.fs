@@ -72,7 +72,7 @@ type PersonsActor with
                   Event = Arrival
                   CreatedOn = p.ArrivalClock }
 
-            this.B.Enqueue (PersonEvent evt)
+            this.B.EnqueueCommonEvent (PersonEvent evt)
 
     member this.processEvent clk (evt: PersonEvent) =
         if this.B.LogDetails.ShowEvents then

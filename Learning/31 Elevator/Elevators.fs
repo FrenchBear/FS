@@ -185,7 +185,7 @@ type ElevatorsActor with
                           Event = ExitCabin
                           CreatedOn = clk }
 
-                    this.B.Enqueue (PersonEvent evt2)
+                    this.B.EnqueueCommonEvent (PersonEvent evt2)
 
                     true // Indicates that a person has moved out, so we shouldn't call allowMoveIn yet
 
