@@ -217,17 +217,12 @@ type RunningStatus =
 // ----------------------------------------
 // Landings
 
-type Landings =
-    { _Persons: Person list array }
-
-    member this.getPersons(floor: Floor) =
-        let (Floor fl) = floor
-        this._Persons[fl]
-
-    member this.setPersons (floor: Floor) value =
-        let (Floor fl) = floor
-        this._Persons[fl] <- value
-
+type Landing =
+    {
+        Persons: Person List
+        CallUp: bool
+        CallDown: bool
+    }
 
 // ----------------------------------------
 // Events
@@ -338,7 +333,7 @@ type ElevatorsActor =
     { B: DataBag
       Cabins: Cabin array
       Statistics: (Clock * CabinStatistic) list array
-      Landings: Landings
+      Landings: Landing array
       mutable Persons: PersonsActor option } // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
 
     member this.levels = this.B.SimulationElevators.Levels

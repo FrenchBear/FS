@@ -140,7 +140,8 @@ type ElevatorsActor with
     member this.getDecisionEvent(clk: Clock) =
         // For landings, we stop only if there is at least one person going in the same direction as the cabin
         let landingStopRequest =
-            let ll = this.Landings.getPersons this.Cabins[0].Floor
+            let (Floor iFloor) = this.Cabins[0].Floor
+            let ll = this.Landings[iFloor].Persons
 
             if ll.IsEmpty then
                 false

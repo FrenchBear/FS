@@ -84,8 +84,8 @@ type PersonsActor with
         match evt.Event with
         | Arrival ->
             Logging.logPersonArrival this.B clk evt.Person
-            let prevList = this.Elevators.Landings.getPersons evt.Person.EntryFloor
-            this.Elevators.Landings.setPersons evt.Person.EntryFloor (evt.Person :: prevList)
+            let (Floor iFloor) = evt.Person.EntryFloor
+            this.Elevators.Landings[iFloor] <- { this.Elevators.Landings[iFloor] with Persons = evt.Person::this.Elevators.Landings[iFloor].Persons }
             this.Elevators.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
 
         | ExitCabin ->
