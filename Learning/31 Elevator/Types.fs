@@ -25,7 +25,8 @@ type Durations =
       OneLevelFullSpeed: int
       FullSpeedBeforeDecisionDuration: int // and after decision before deceleration
       OpeningDoorsDuration: int // and closing doors duration; Include delay between motor off/opening and closed/motor on
-      MoveInDuration: int } // and move out duration
+      MoveInDuration: int // and move out duration
+      MotorDelayDuration: int } // Between motorOff (endDeceleration) and startOpeningDoors, or endClosingDoors and startAccelerating
 
 let standardLogDetails =
     { ShowLog = false
@@ -39,7 +40,8 @@ let standardDurations =
       OneLevelFullSpeed = 2
       FullSpeedBeforeDecisionDuration = 1
       OpeningDoorsDuration = 2
-      MoveInDuration = 2 }
+      MoveInDuration = 2
+      MotorDelayDuration = 1 }
 
 (*
     One level with acceleration, decision, and deceleration: 6s
@@ -125,10 +127,12 @@ type Person =
     // For C# comparisons
     override this.ToString() =
         let (PersonId iId) = this.Id
+
         let sEntryClock =
             match this.EntryClock with
             | None -> ""
             | Some clk -> sprintf "%0A" clk
+
         let sExitClock =
             match this.ExitClock with
             | None -> ""
@@ -165,6 +169,20 @@ type Cabin =
       IgnoreNextEndClosingDoorsEvent: bool
       Capacity: int
       Persons: Person list }
+
+    // For C# comparisons
+    override this.ToString() =
+        let strSR =
+            "["
+            + System.String.Join(", ", this._StopRequested |> Array.map (fun x -> if x then "True" else "False"))
+            + "]"
+
+        let strPersons =
+            "["
+            + System.String.Join(", ", this.Persons |> List.map (fun p -> p.ToString()))
+            + "]"
+
+        $"Cabin {{ Floor = {this.Floor}, MotorStatus = {this.MotorStatus}, DoorStatus = {this.DoorStatus}, Direction = {this.Direction}, CabinStatus = {this.CabinStatus}, StopRequested = {strSR}, IgnoreNextEndClosingDoorsEvent = {this.IgnoreNextEndClosingDoorsEvent}, Capacity = {this.Capacity}, Persons = {strPersons} }}"
 
     member this.getStopRequested floor =
         let (Floor f) = floor
@@ -222,11 +240,13 @@ type RunningStatus =
 // Landings
 
 type Landing =
-    {
-        Persons: Person List
-        CallUp: bool
-        CallDown: bool
-    }
+    { Persons: Person List
+      CallUp: bool
+      CallDown: bool }
+
+    member this.deepCopy() =
+        { this with
+            Persons = List.map id this.Persons }
 
 // ----------------------------------------
 // Events
@@ -243,20 +263,31 @@ type PersonEvent =
       CabinIndex: int
       CreatedOn: Clock }
 
+    // For C# comparisons
+    override this.ToString() =
+        $"PersonEvent {{ Clock = {this.Clock}, Event = {this.Event}, Person = {this.Person}, CabinIndex = {this.CabinIndex}, CreatedOn = {this.CreatedOn} }}"
+
+
 
 type ElevatorEventDetail =
+    | StartAcceleration
     | EndAcceleration
-    | EndDeceleration
-    | EndMovingFullSpeed
     | Decision
+    | EndMovingFullSpeed
+    | EndDeceleration
+    | EndMotorDelay
     | EndOpeningDoors
     | EndClosingDoors
 
 type ElevatorEvent =
     { Clock: Clock
-      CabinIndex: int
       Event: ElevatorEventDetail
+      CabinIndex: int
       CreatedOn: Clock }
+
+    // For C# comparisons
+    override this.ToString() =
+        $"ElevatorEvent {{ Clock = {this.Clock}, Event = {this.Event}, CabinIndex = {this.CabinIndex}, CreatedOn = {this.CreatedOn} }}"
 
 
 type CommonEvent =
@@ -331,7 +362,7 @@ type DataBag =
     member this.RegisterEvent(evt: CommonEvent) =
         match evt with
         | ElevatorEvent ee -> this.EventsQueue.Enqueue(evt, { Clock = ee.Clock; Priority = 1 })
-        | PersonEvent pe -> this.EventsQueue.Enqueue(evt, { Clock = pe.Clock; Priority = 0 })       // Higher priority
+        | PersonEvent pe -> this.EventsQueue.Enqueue(evt, { Clock = pe.Clock; Priority = 0 }) // Higher priority
 
 // ----------------------------------------
 // Actors

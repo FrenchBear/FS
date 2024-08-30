@@ -23,13 +23,13 @@ let testSimple1 () =
               NumberOfCabins = 1
               Capacity = 6 }
           SimulationPersons = SimulationPersonsArray persone
-          LogDetails = standardLogDetails
-          //LogDetails = { 
-          //    ShowLog = true
-          //    ShowEvents = true
-          //    ShowInitialPersons = true
-          //    ShowDetailedPersonStats = true
-          //    ShowDetailedElevatorStatRecords = true }
+          //LogDetails = standardLogDetails
+          LogDetails = { 
+              ShowLog = true
+              ShowEvents = false
+              ShowInitialPersons = false
+              ShowDetailedPersonStats = false
+              ShowDetailedElevatorStatRecords = false }
           Durations = standardDurations
           }
 
@@ -65,7 +65,7 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
               NumberOfCabins = 1
               Capacity = 6 }
           SimulationPersons = SimulationPersonsArray tenPersonsArrivingAtTimeZero
-          LogDetails = standardLogDetails
+          LogDetails = { standardLogDetails with ShowLog = true }
           Durations = standardDurations
           }
 
@@ -98,7 +98,7 @@ let testPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
               NumberOfCabins = 1
               Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
-          LogDetails = standardLogDetails
+          LogDetails = { standardLogDetails with ShowLog = true }
           Durations = standardDurations
           }
 
@@ -129,23 +129,19 @@ let testDoorsClosingWhenAPersonArrives () =
               NumberOfCabins = 1
               Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
-          LogDetails = { 
-              ShowLog = false
-              ShowEvents = false
-              ShowInitialPersons = false
-              ShowDetailedPersonStats = false
-              ShowDetailedElevatorStatRecords = false }
+          LogDetails = { standardLogDetails with ShowLog = true }
           Durations = { 
               AccelerationDuration = 2
               OneLevelFullSpeed = 2
               FullSpeedBeforeDecisionDuration = 1
               OpeningDoorsDuration = 4                  // Need a long closing door for this test
-              MoveInDuration = 2 }
+              MoveInDuration = 2 
+              MotorDelayDuration = 1 }
           }
 
     let res = runSimulation b
 
-    assert (res.SimulationStats.SimulationDuration = 58)
+    assert (res.SimulationStats.SimulationDuration = 60)
     let tp2 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 2)
     let tp3 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 3)
     assert (tp2.EntryClock = Some(Clock 28))
@@ -174,33 +170,33 @@ let testPersonsGoingUpAndDownFromSameFloor () =
               NumberOfCabins = 1
               Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
-          //LogDetails = standardLogDetails
-          LogDetails = { 
-              ShowLog = true
-              ShowEvents = false
-              ShowInitialPersons = false
-              ShowDetailedPersonStats = true
-              ShowDetailedElevatorStatRecords = false }
+          LogDetails = { standardLogDetails with ShowLog = true }
+          //LogDetails = { 
+          //    ShowLog = true
+          //    ShowEvents = false
+          //    ShowInitialPersons = false
+          //    ShowDetailedPersonStats = true
+          //    ShowDetailedElevatorStatRecords = false }
           Durations = standardDurations
           }
 
     let res = runSimulation b
 
-    assert (res.SimulationStats.SimulationDuration = 74)
+    assert (res.SimulationStats.SimulationDuration = 81)
     let tp1 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 1)
     let tp2 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 2)
     let tp3 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 3)
     let tp4 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 4)
 
-    assert (tp1.EntryClock = Some(Clock 20))
-    assert (tp3.EntryClock = Some(Clock 22))
-    assert (tp1.ExitClock = Some(Clock 38))
-    assert (tp3.ExitClock = Some(Clock 40))
+    assert (tp1.EntryClock = Some(Clock 21))
+    assert (tp3.EntryClock = Some(Clock 23))
+    assert (tp1.ExitClock = Some(Clock 41))
+    assert (tp3.ExitClock = Some(Clock 43))
 
-    assert (tp2.EntryClock = Some(Clock 52))
-    assert (tp4.EntryClock = Some(Clock 54))
-    assert (tp2.ExitClock = Some(Clock 70))
-    assert (tp4.ExitClock = Some(Clock 72))
+    assert (tp2.EntryClock = Some(Clock 57))
+    assert (tp4.EntryClock = Some(Clock 59))
+    assert (tp2.ExitClock = Some(Clock 77))
+    assert (tp4.ExitClock = Some(Clock 79))
 
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
@@ -214,12 +210,12 @@ let testARandomSimulation () =
     let b =
         { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
           SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
-          SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, Ground50Levels50) 
-          LogDetails = { standardLogDetails with ShowInitialPersons=false }
+          SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, FullRandom) 
+          LogDetails = { standardLogDetails with ShowLog = false }
           //LogDetails = { 
           //    ShowLog = true
           //    ShowEvents = true
-          //    ShowInitialPersons = false
+          //    ShowInitialPersons = true
           //    ShowDetailedPersonStats = true
           //    ShowDetailedElevatorStatRecords = true }
           Durations = standardDurations
@@ -263,8 +259,8 @@ printfn "Elevator simulation in F#\n"
 //testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 //testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 //testDoorsClosingWhenAPersonArrives ()
-testPersonsGoingUpAndDownFromSameFloor ()
-//testARandomSimulation ()
+//testPersonsGoingUpAndDownFromSameFloor ()
+testARandomSimulation ()
 //testContinuousSimulation ()
 
 printfn "\nDone."

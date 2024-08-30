@@ -62,7 +62,6 @@ type PersonsActor with
             printfn "\nPersons for the simulation"
 
             for p in personsArray do
-                //printfn "%0A" p
                 printfn "%s" (p.ToString())     // ToString for comparison with C#
 
         for p in personsArray do
@@ -77,7 +76,8 @@ type PersonsActor with
 
     member this.processEvent clk (evt: PersonEvent) =
         if this.B.LogDetails.ShowEvents then
-            let evtStr = sprintf "%0A" evt
+            //let evtStr = sprintf "%0A" evt
+            let evtStr = evt.ToString()
             Logging.logMessage this.B evt.Clock $"Person evt: {evtStr}"
 
         assert (clk = evt.Clock)
@@ -85,9 +85,14 @@ type PersonsActor with
         match evt.Event with
         | Arrival ->
             Logging.logPersonArrival this.B clk evt.Person
+            
             let (Floor iFloor) = evt.Person.EntryFloor
+            let originalLanding = this.Elevators.Landings[iFloor].deepCopy ()
             this.Elevators.Landings[iFloor] <- { this.Elevators.Landings[iFloor] with Persons = evt.Person::this.Elevators.Landings[iFloor].Persons }
             this.Elevators.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
+
+            let updatedLanding = this.Elevators.Landings[iFloor]
+            Logging.logLandingUpdate this.B clk evt.Person.EntryFloor originalLanding updatedLanding
 
         | EndEnterCabin ->
             // We don't write records to Journet in F# yet

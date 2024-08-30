@@ -41,15 +41,24 @@ type ElevatorsActor with
     member this.callElevator (clk: Clock) (entry: Floor) (exit: Floor) =
         assert (exit <> entry)
 
-        //if clk=Clock 775 then System.Diagnostics.Debugger.Break()
-
         if this.B.LogDetails.ShowEvents then
             printfn "\nCalling elevator from %A to go to %A" entry exit
 
         // Keep a deep copy for final logging
         let originalCabin = this.Cabins[0].deepCopy ()
-
         let cabin = this.Cabins[0]
+
+        // Update Landing[entry] CallUp/CallDown
+        if entry <> cabin.Floor || (entry = cabin.Floor && cabin.DoorStatus = Closed) then
+            let (Floor iEntry) = entry
+            if exit > entry then
+                // Going Up
+                if not this.Landings[iEntry].CallUp then
+                    this.Landings[iEntry] <- { this.Landings[iEntry] with CallUp = true };
+            else
+                // Going Down
+                if not this.Landings[iEntry].CallDown then
+                    this.Landings[iEntry] <- { this.Landings[iEntry] with CallDown = true };
 
         // Actually only do something if elevator is idle
         // If elevator is busy, then at some point elevator will arrive
@@ -123,7 +132,7 @@ type ElevatorsActor with
                 { cabin with
                     Direction = if (entry > cabin.Floor) then Up else Down }
 
-        Logging.logCabinUpdate clk this.B originalCabin this.Cabins[0]
+        Logging.logCabinUpdate this.B clk originalCabin this.Cabins[0]
 
 
     member this.isStopRequestedBeyondPosition (cabin: Cabin) floor direction =

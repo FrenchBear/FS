@@ -12,7 +12,7 @@ let logMessage b clk msg =
         let (Clock iClk) = clk
         printfn $"clk: {iClk, 4}  {msg}"
 
-let logCabinUpdate clk b before after =
+let logCabinUpdate b clk before after =
     let lst = new System.Collections.Generic.List<string>()
 
     if before.Floor <> after.Floor then
@@ -66,13 +66,49 @@ let logCabinUpdate clk b before after =
         lst.Add(System.String.Join(", ", lstPersons))
 
     if not (lst.Count = 0) then
-        logMessage b clk (System.String.Join(", ", lst))
+        logMessage b clk ("Cabin:   " + System.String.Join(", ", lst))
+
+
+let logLandingUpdate b clk floor before after =
+    let lst = new System.Collections.Generic.List<string>()
+
+    if before.CallUp <> after.CallUp then
+        lst.Add($"CallUp {before.CallUp}→{after.CallUp}")
+    if before.CallDown <> after.CallDown then
+        lst.Add($"CallDown {before.CallDown}→{after.CallDown}")
+
+    let lstPersons = new System.Collections.Generic.List<string>()
+
+    if List.length before.Persons <> List.length after.Persons then
+        lstPersons.Add($"Persons count {List.length before.Persons}→{List.length after.Persons}")
+
+    for pb in before.Persons do
+        let ixOpt = List.tryFindIndex (fun pa -> pa.Id = pb.Id) after.Persons
+
+        if ixOpt.IsNone then
+            let (PersonId pid) = pb.Id
+            lstPersons.Add($"Person {pid}→in cabin")
+
+    for pa in after.Persons do
+        let ixOpt = List.tryFindIndex (fun pb -> pb.Id = pa.Id) before.Persons
+
+        if ixOpt.IsNone then
+            let (PersonId pid) = pa.Id
+            lstPersons.Add($"Person {pid} arrived →{pa.ExitFloor}")
+
+    if not (lstPersons.Count = 0) then
+        lst.Add(System.String.Join(", ", lstPersons))
+
+    if not (lst.Count = 0) then
+        let (Floor iFloor) = floor
+        logMessage b clk ($"Landing: Landing {iFloor} " + System.String.Join(", ", lst))
+
 
 let logPersonArrival b clk p =
     let (PersonId person) = p.Id
     let (Floor entry) = p.EntryFloor
     let (Floor exit) = p.ExitFloor
-    logMessage b clk $"Person {person} Arrival Floor {entry}→Floor {exit}"
+    logMessage b clk $"Person:  Person {person} Arrival Floor {entry}→Floor {exit}"
 
 let logPersonExit b clk p =
     let (PersonId pid) = p.Id
@@ -85,5 +121,5 @@ let logPersonExit b clk p =
     let totalTransportationTime = exitIClk - arrivalIClk
 
     logMessage b clk
-        $"Person {pid} Exit, Arrival Floor {entry}@{arrivalIClk}, Waited {waitingCabin}, Entered@{entryIClk}, Exit Floor {exit}@{exitIClk}, Total {totalTransportationTime}"
+        $"Person:  Person {pid} Exit, Arrival Floor {entry}@{arrivalIClk}, Waited {waitingCabin}, Entered@{entryIClk}, Exit Floor {exit}@{exitIClk}, Total {totalTransportationTime}"
 
