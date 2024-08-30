@@ -12,9 +12,6 @@ type ElevatorsActor with
     member this.recordStat clk ixCabin stat =
         this.Statistics[ixCabin] <- (clk, stat) :: this.Statistics[ixCabin]
 
-    member this.registerEvent evt =
-        this.B.EventsQueue.Enqueue(ElevatorEvent evt, {Clock= evt.Clock; Priority=1})
-
     member this.getEndClosingDoorEventRemainingTime clk =
         let rec findEndClosingDoorsEvent (lst: (struct (CommonEvent * ClockPriority)) list) =
             let hasItem, _, nextClkPri = this.B.EventsQueue.TryPeek()
@@ -70,11 +67,11 @@ type ElevatorsActor with
                         CabinStatus = Busy
                         DoorStatus = Opening }
 
-                this.registerEvent
+                this.B.RegisterEvent (ElevatorEvent
                     { ElevatorEvent.Clock = clk.addOffset this.B.Durations.OpeningDoorsDuration
                       CabinIndex = 0
                       Event = EndOpeningDoors
-                      CreatedOn = clk }
+                      CreatedOn = clk })
 
             // Otherwise we start accelerating
             else
@@ -87,11 +84,11 @@ type ElevatorsActor with
                         MotorStatus = Accelerating
                         Direction = if (entry > cabin.Floor) then Up else Down }
 
-                this.registerEvent
+                this.B.RegisterEvent (ElevatorEvent
                     { ElevatorEvent.Clock = clk.addOffset this.B.Durations.AccelerationDuration
                       CabinIndex = 0
                       Event = EndAcceleration
-                      CreatedOn = clk }
+                      CreatedOn = clk })
 
         // Cabin is not idle, so we need to check two special cases
 
@@ -111,11 +108,11 @@ type ElevatorsActor with
                         IgnoreNextEndClosingDoorsEvent = true } // Door is now opening, we'll ignore coming EndClosingDoorsEvent
 
                 // And we register a new EndOpeningDoors event for the cabin
-                this.registerEvent
+                this.B.RegisterEvent (ElevatorEvent
                     { ElevatorEvent.Clock = clk.addOffset (this.B.Durations.OpeningDoorsDuration - remainigTime)
                       CabinIndex = 0
                       Event = EndOpeningDoors
-                      CreatedOn = clk }
+                      CreatedOn = clk })
 
         // Cabin is not idle, on a different floor, but with no direction. If door is closing, then update its direction
         elif cabin.Floor <> entry && cabin.Direction = NoDirection then

@@ -61,11 +61,11 @@ type ElevatorsActor with
             assert (this.Cabins[0].Direction <> NoDirection)
             assert (this.Cabins[0].CabinStatus = Busy)
 
-            this.registerEvent
+            this.B.RegisterEvent (ElevatorEvent
                 { ElevatorEvent.Clock = clk.addOffset this.B.Durations.FullSpeedBeforeDecisionDuration
                   CabinIndex = 0
                   Event = Decision
-                  CreatedOn = clk }
+                  CreatedOn = clk })
 
             this.Cabins[0] <- { this.Cabins[0] with MotorStatus = FullSpeed }
 
@@ -82,7 +82,7 @@ type ElevatorsActor with
 
             // Some business logic to decide whether cabin should start decelerating and stop at this floor, or continue full speed to next floor (and take decision again)
             let decisionEvt = this.getDecisionEvent clk
-            this.registerEvent decisionEvt
+            this.B.RegisterEvent (ElevatorEvent decisionEvt)
 
         | EndMovingFullSpeed ->
             assert (this.Cabins[0].MotorStatus = FullSpeed)
@@ -90,11 +90,11 @@ type ElevatorsActor with
             assert (this.Cabins[0].Direction <> NoDirection)
             assert (this.Cabins[0].CabinStatus = Busy)
 
-            this.registerEvent
+            this.B.RegisterEvent (ElevatorEvent
                 { ElevatorEvent.Clock = clk.addOffset this.B.Durations.AccelerationDuration
                   CabinIndex = 0
                   Event = EndDeceleration
-                  CreatedOn = clk }
+                  CreatedOn = clk })
 
             this.recordStat clk 0 StatMotorDecelerating
 
@@ -111,11 +111,11 @@ type ElevatorsActor with
             this.recordStat clk 0 StatMotorOff
 
             // Ok, we arrive at a floor with stop requested
-            this.registerEvent
+            this.B.RegisterEvent (ElevatorEvent
                 { ElevatorEvent.Clock = clk.addOffset this.B.Durations.OpeningDoorsDuration
                   CabinIndex = 0
                   Event = EndOpeningDoors
-                  CreatedOn = clk }
+                  CreatedOn = clk })
 
             // Clear the stop requested for current floor
             this.Cabins[0].clearStopRequested this.Cabins[0].Floor
@@ -170,11 +170,11 @@ type ElevatorsActor with
                     this.Cabins[0] <- { this.Cabins[0] with Persons = newPersons }
 
                     // Elevator event to continue with next person moving out or in the elevator at current floor
-                    this.registerEvent
+                    this.B.RegisterEvent (ElevatorEvent
                         { ElevatorEvent.Clock = clk.addOffset this.B.Durations.MoveInDuration
                           CabinIndex = 0
                           Event = EndOpeningDoors
-                          CreatedOn = clk }
+                          CreatedOn = clk })
 
                     // Person event to record cabin exit for final stats
                     let evt2 =
@@ -185,7 +185,7 @@ type ElevatorsActor with
                           Event = ExitCabin
                           CreatedOn = clk }
 
-                    this.B.EnqueueCommonEvent (PersonEvent evt2)
+                    this.B.RegisterEvent (PersonEvent evt2)
 
                     true // Indicates that a person has moved out, so we shouldn't call allowMoveIn yet
 
@@ -227,11 +227,11 @@ type ElevatorsActor with
                                 this.Landings.setPersons this.Cabins[0].Floor remainingPersons
 
                                 // Elevator event to continue with next person moving out or in the elevator at current floor
-                                this.registerEvent
+                                this.B.RegisterEvent (ElevatorEvent
                                     { ElevatorEvent.Clock = clk.addOffset this.B.Durations.MoveInDuration
                                       CabinIndex = 0
                                       Event = EndOpeningDoors
-                                      CreatedOn = clk }
+                                      CreatedOn = clk })
 
                                 true // Indicates that a person moved in, so when it's done, we must check again later (once this person has moved in)
                             // whether another person is candidate to move in before starting motor
@@ -257,11 +257,11 @@ type ElevatorsActor with
                     this.Cabins[0] <- { this.Cabins[0] with DoorStatus = Closing }
                     this.recordStat clk 0 (StatPersonsInCabin(List.length this.Cabins[0].Persons))
 
-                    this.registerEvent
+                    this.B.RegisterEvent (ElevatorEvent
                         { ElevatorEvent.Clock = clk.addOffset this.B.Durations.OpeningDoorsDuration
                           CabinIndex = 0
                           Event = EndClosingDoors
-                          CreatedOn = clk }
+                          CreatedOn = clk })
 
         | EndClosingDoors when this.Cabins[0].IgnoreNextEndClosingDoorsEvent ->
             this.Cabins[0] <-
@@ -296,11 +296,11 @@ type ElevatorsActor with
                     { this.Cabins[0] with // Beware, cabin has already been updated...
                         MotorStatus = Accelerating }
 
-                this.registerEvent
+                this.B.RegisterEvent (ElevatorEvent
                     { ElevatorEvent.Clock = clk.addOffset this.B.Durations.AccelerationDuration
                       CabinIndex = 0
                       Event = EndAcceleration
-                      CreatedOn = clk }
+                      CreatedOn = clk })
 
                 this.recordStat clk 0 StatMotorAccelerating
 

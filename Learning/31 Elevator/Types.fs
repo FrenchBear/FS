@@ -326,7 +326,7 @@ type DataBag =
       LogDetails: LogDetails
       Durations: Durations }
 
-    member this.EnqueueCommonEvent(evt: CommonEvent) =
+    member this.RegisterEvent(evt: CommonEvent) =
         match evt with
         | ElevatorEvent ee -> this.EventsQueue.Enqueue(evt, { Clock = ee.Clock; Priority = 1 })
         | PersonEvent pe -> this.EventsQueue.Enqueue(evt, { Clock = pe.Clock; Priority = 0 })       // Higher priority
