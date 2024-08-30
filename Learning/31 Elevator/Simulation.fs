@@ -55,7 +55,7 @@ let runSimulation (b: DataBag) =
     let sw = System.Diagnostics.Stopwatch.StartNew()
     elevatorsActor.initialize ()
     personsActor.initialize ()
-    let (Clock iClk), eventCount, ps, es, tp = processNextEvent (Clock 0) 0
+    let (Clock iClk), eventCount, ps, es, tp = processNextEvent (Clock.Zero) 0
     sw.Stop()
 
     let ss =

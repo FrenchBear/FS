@@ -11,7 +11,7 @@ type ElevatorsActor with
 
     static member createNew b =
         let cabinInitialState =
-            { Floor = Floor 0
+            { Floor = Floor.Zero
               MotorStatus = Off
               Direction = NoDirection
               DoorStatus = Closed
@@ -34,14 +34,14 @@ type ElevatorsActor with
 
 
     member this.initialize() =
-        let cz = Clock 0
+        let cz = Clock.Zero
         Logging.logMessage this.B cz "Elevator On and ready"
         let cabin = this.Cabins[0]
         assert (this.Cabins[0].MotorStatus = Off)
         assert (this.Cabins[0].DoorStatus = Closed)
         assert (this.Cabins[0].Direction = NoDirection)
         assert (this.Cabins[0].CabinStatus = Idle)
-        assert (this.Cabins[0].Floor = Floor 0)
+        assert (this.Cabins[0].Floor = Floor.Zero)
 
         this.recordStat cz 0 StatCabinIdle
         this.recordStat cz 0 StatMotorOff
@@ -189,6 +189,17 @@ type ElevatorsActor with
                         { this.Cabins[0] with
                             Persons = newPersons }
 
+                    // Event than to add JournalPersonCabinEndEnter into the journal
+                    this.B.RegisterEvent(
+                        PersonEvent
+                            { PersonEvent.Clock = clk.addOffset(this.B.Durations.MoveInDuration)
+                              Person = p
+                              CabinIndex = 0
+                              Event = PersonEventDetail.EndEnterCabin
+                              CreatedOn = clk
+                            }
+                    )
+
                     // Elevator event to continue with next person moving out or in the elevator at current floor
                     this.B.RegisterEvent(
                         ElevatorEvent
@@ -204,6 +215,7 @@ type ElevatorsActor with
                           Person =
                             { p with
                                 ExitClock = Some(clk.addOffset this.B.Durations.MoveInDuration) }
+                          CabinIndex = 0
                           Event = ExitCabin
                           CreatedOn = clk }
 
@@ -372,9 +384,9 @@ type ElevatorsActor with
                 let newAcc =
                     match ce with
                     | StatMotorOff ->
-                        assert (clk = Clock 0 || acc.IsMotorOn = true)
+                        assert (clk = Clock.Zero || acc.IsMotorOn = true)
 
-                        if clk > Clock 0 then
+                        if clk > Clock.Zero then
                             acc.LevelsCovered[acc.PersonsInCabin] <- acc.LevelsCovered[acc.PersonsInCabin] + 1
 
 
@@ -394,7 +406,7 @@ type ElevatorsActor with
                         acc
 
                     | StatCabinIdle ->
-                        assert (clk = Clock 0 || acc.IsCabinBusy = true)
+                        assert (clk = Clock.Zero || acc.IsCabinBusy = true)
 
                         { acc with
                             CabinBusyTime = acc.CabinBusyTime + (clk.minus acc.LastCabinBusyClock)
@@ -436,14 +448,14 @@ type ElevatorsActor with
                 cumulate tail newAcc
 
         let start =
-            { LastMotorOnClock = Clock 0
-              LastMotorOffClock = Clock 0
+            { LastMotorOnClock = Clock.Zero
+              LastMotorOffClock = Clock.Zero
               IsMotorOn = false
               MotorOnTime = 0
               MotorOffTime = 0
 
-              LastCabinBusyClock = Clock 0
-              LastCabinIdleClock = Clock 0
+              LastCabinBusyClock = Clock.Zero
+              LastCabinIdleClock = Clock.Zero
               IsCabinBusy = false
               CabinBusyTime = 0
               CabinIdleTime = 0

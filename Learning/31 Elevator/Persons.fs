@@ -28,9 +28,9 @@ type PersonsActor with
                         match algorithm with
                         | Ground50Levels50 ->
                             if rndPersons.randInt 0 1 = 0 then
-                                Floor 0, Floor(rndPersons.randInt 1 (this.B.SimulationElevators.Levels - 1))
+                                Floor.Zero, Floor(rndPersons.randInt 1 (this.B.SimulationElevators.Levels - 1))
                             else
-                                Floor(rndPersons.randInt 1 (this.B.SimulationElevators.Levels - 1)), Floor 0
+                                Floor(rndPersons.randInt 1 (this.B.SimulationElevators.Levels - 1)), Floor.Zero
 
                         | FullRandom ->
                             Floor(rndPersons.randInt 0 (this.B.SimulationElevators.Levels - 1)),
@@ -70,6 +70,7 @@ type PersonsActor with
                 { PersonEvent.Clock = p.ArrivalClock
                   Person = p
                   Event = Arrival
+                  CabinIndex = 0
                   CreatedOn = p.ArrivalClock }
 
             this.B.RegisterEvent (PersonEvent evt)
@@ -87,6 +88,10 @@ type PersonsActor with
             let (Floor iFloor) = evt.Person.EntryFloor
             this.Elevators.Landings[iFloor] <- { this.Elevators.Landings[iFloor] with Persons = evt.Person::this.Elevators.Landings[iFloor].Persons }
             this.Elevators.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
+
+        | EndEnterCabin ->
+            // We don't write records to Journet in F# yet
+            ()
 
         | ExitCabin ->
             this.TransportedPersons.Add(evt.Person)

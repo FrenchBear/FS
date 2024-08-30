@@ -81,6 +81,9 @@ type Floor =
         | Down -> if sf > 0 then Some(Floor(sf - 1)) else None
         | NoDirection -> None
 
+    static member Zero = Floor 0
+
+
 // Use typed Clock rather than int alias for better type checking
 type Clock =
     | Clock of int
@@ -94,6 +97,7 @@ type Clock =
         let (Clock iOther) = otherClk
         iClk - iOther
 
+    static member Zero = Clock 0
 
 // ----------------------------------------
 // Person
@@ -229,12 +233,14 @@ type Landing =
 
 type PersonEventDetail =
     | Arrival
+    | EndEnterCabin
     | ExitCabin
 
 type PersonEvent =
     { Clock: Clock
       Event: PersonEventDetail
       Person: Person
+      CabinIndex: int
       CreatedOn: Clock }
 
 
@@ -251,6 +257,7 @@ type ElevatorEvent =
       CabinIndex: int
       Event: ElevatorEventDetail
       CreatedOn: Clock }
+
 
 type CommonEvent =
     | ElevatorEvent of ElevatorEvent
