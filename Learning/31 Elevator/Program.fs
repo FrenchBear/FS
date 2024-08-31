@@ -23,18 +23,20 @@ let testSimple1 () =
               NumberOfCabins = 1
               Capacity = 6 }
           SimulationPersons = SimulationPersonsArray persone
-          //LogDetails = standardLogDetails
-          LogDetails = { 
-              ShowLog = true
-              ShowEvents = false
-              ShowInitialPersons = false
-              ShowDetailedPersonStats = false
-              ShowDetailedElevatorStatRecords = false }
+          LogDetails = { standardLogDetails with ShowLog = true }
+          //LogDetails = { 
+          //    ShowLog = true
+          //    ShowEvents = false
+          //    ShowInitialPersons = false
+          //    ShowDetailedPersonsStats = false
+          //    ShowDetailedElevatorStatRecords = false }
           Durations = standardDurations
           }
 
     let res = runSimulation b
 
+    Simulation.PrintSimulationData(res.SimulationData);
+    PersonsActor.PrintTransportedPersons(res.TransportedPersons);
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
@@ -75,6 +77,8 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
     assert (res.ElevatorsStats.LevelsCovered[0] = 3) // Then three levels again with an empty cabin, to go back floor 3->0 to take remaining persons
     assert (res.ElevatorsStats.LevelsCovered[4] = 3) // Final travel over 3 levels too, with 4 remaining persons
 
+    Simulation.PrintSimulationData(res.SimulationData);
+    PersonsActor.PrintTransportedPersons(res.TransportedPersons);
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
@@ -106,6 +110,8 @@ let testPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
 
     assert (res.ElevatorsStats.LevelsCovered[2] = 3) // Make sure that the two persons traveled together on 3 levels
 
+    Simulation.PrintSimulationData(res.SimulationData);
+    PersonsActor.PrintTransportedPersons(res.TransportedPersons);
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
@@ -147,6 +153,8 @@ let testDoorsClosingWhenAPersonArrives () =
     assert (tp2.EntryClock = Some(Clock 28))
     assert (tp3.EntryClock = Some(Clock 30))
 
+    Simulation.PrintSimulationData(res.SimulationData);
+    PersonsActor.PrintTransportedPersons(res.TransportedPersons);
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
@@ -198,6 +206,8 @@ let testPersonsGoingUpAndDownFromSameFloor () =
     assert (tp2.ExitClock = Some(Clock 77))
     assert (tp4.ExitClock = Some(Clock 79))
 
+    Simulation.PrintSimulationData(res.SimulationData);
+    PersonsActor.PrintTransportedPersons(res.TransportedPersons);
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
@@ -211,7 +221,7 @@ let testARandomSimulation () =
         { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
           SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, FullRandom) 
-          LogDetails = { standardLogDetails with ShowLog = false }
+          LogDetails = { standardLogDetails with ShowDetailedPersonsStats = false }
           //LogDetails = { 
           //    ShowLog = true
           //    ShowEvents = true
@@ -221,14 +231,13 @@ let testARandomSimulation () =
           Durations = standardDurations
         }
 
-    printSimulationParameters b
-    
     let res = runSimulation b
     
+    Simulation.PrintSimulationData(res.SimulationData);
+    PersonsActor.PrintTransportedPersons(res.TransportedPersons);
     PersonsActor.printPersonStats res.PersonsStats
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
-
 
 
 let testContinuousSimulation () =

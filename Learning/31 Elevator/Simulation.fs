@@ -11,6 +11,35 @@
 [<AutoOpen>]
 module Simulation
 
+let getSimulationData (b: DataBag) =
+    let sd:SimulationData =
+        {
+                Levels = b.SimulationElevators.Levels
+                NumberOfCabins = 1
+                Capacity = b.SimulationElevators.Capacity
+
+                FixedPersonsList = match b.SimulationPersons with
+                                   | SimulationPersonsArray _ -> true
+                                   | _ -> false
+                PersonsToCarry = b.SimulationPersons.getPersonsToCarry
+                ArrivalLength = match b.SimulationPersons with
+                                | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> Some arrivalLength
+                                | _ -> None
+                Algorithm = match b.SimulationPersons with
+                            | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> Some algorithm
+                            | _ -> None
+                RandomSeed = match b.SimulationPersons with
+                             | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> Some randomSeed
+                             | _ -> None
+                AccelerationDuration = b.Durations.AccelerationDuration
+                OneLevelFullSpeed = b.Durations.OneLevelFullSpeed
+                FullSpeedBeforeDecisionDuration = b.Durations.FullSpeedBeforeDecisionDuration
+                OpeningDoorsDuration = b.Durations.OpeningDoorsDuration
+                MoveInDuration = b.Durations.MoveInDuration
+                MotorDelayDuration = b.Durations.MotorDelayDuration
+        }
+    sd
+
 // Find next event in line, process it, and iterates until there are no more events to process
 let runSimulation (b: DataBag) =
     let elevatorsActor = ElevatorsActor.createNew b
@@ -32,13 +61,11 @@ let runSimulation (b: DataBag) =
             if b.LogDetails.ShowLog then
                 printfn "\nEnd simulation clk: %d\n" iClk
 
-            if b.LogDetails.ShowDetailedPersonStats then
-                personsActor.printDetailedPersonStats ()
-
-            let ps = personsActor.getPersonStats ()
+            let sd = getSimulationData b
+            let ps = personsActor.getPersonsStats ()
             let es = elevatorsActor.getElevatorsStats ()
             let tp = personsActor.getTransportedPersons ()
-            clk, eventCount, ps, es, tp
+            clk, eventCount, sd, ps, es, tp
 
         else
             let nextEvent = b.EventsQueue.Dequeue()
@@ -55,7 +82,7 @@ let runSimulation (b: DataBag) =
     let sw = System.Diagnostics.Stopwatch.StartNew()
     elevatorsActor.initialize ()
     personsActor.initialize ()
-    let (Clock iClk), eventCount, ps, es, tp = processNextEvent (Clock.Zero) 0
+    let (Clock iClk), eventCount, sd, ps, es, tp = processNextEvent (Clock.Zero) 0
     sw.Stop()
 
     let ss =
@@ -64,25 +91,29 @@ let runSimulation (b: DataBag) =
           SimulationEventsCount = eventCount }
 
     // Returns a SimulationResult
-    { SimulationStats = ss
+    { 
+      SimulationData = sd
+      SimulationStats = ss
       ElevatorsStats = es
       PersonsStats = ps
-      TransportedPersons = tp }
+      TransportedPersons = tp
+    }
 
-let printSimulationParameters b =
-    printfn "Simulation parameters"
+
+let PrintSimulationData (sd:SimulationData) =
+    printfn "\nSimulation data"
     printfn "  Persons"
 
-    match b.SimulationPersons with
-    | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) ->
-        printfn "    Random persons to carry: %d, Algorithm: %A, Seed: %d" personsToCarry algorithm randomSeed
-        printfn "    Arrival duration:        %d" arrivalLength
-    | SimulationPersonsArray spa -> printfn "    Fixed persons to carry:  %d" (Array.length spa)
+    if sd.FixedPersonsList then
+        printfn "    Fixed persons to carry:  %d" sd.PersonsToCarry
+    else
+        printfn "    Random persons to carry: %d, Algorithm: %A, Random seed: %d" sd.PersonsToCarry sd.Algorithm.Value sd.RandomSeed.Value
+        printfn "    Arrival length:          %d" sd.ArrivalLength.Value
 
     printfn "  Elevators/Building"
-    printfn "    Levels:                  %d" b.SimulationElevators.Levels
-    printfn "    Number of cabins:        %d" b.SimulationElevators.NumberOfCabins
-    printfn "    Capacity of a cabin:     %d" b.SimulationElevators.Capacity
+    printfn "    Levels:                  %d" sd.Levels
+    printfn "    Number of cabins:        %d" sd.NumberOfCabins
+    printfn "    Capacity of a cabin:     %d" sd.Capacity
 
 let printSimulationStats ss =
     printfn "\nSimulation stats"

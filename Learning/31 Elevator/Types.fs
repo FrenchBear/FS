@@ -17,7 +17,7 @@ type LogDetails =
     { ShowLog: bool
       ShowEvents: bool
       ShowInitialPersons: bool
-      ShowDetailedPersonStats: bool
+      ShowDetailedPersonsStats: bool
       ShowDetailedElevatorStatRecords: bool }
 
 type Durations =
@@ -32,7 +32,7 @@ let standardLogDetails =
     { ShowLog = false
       ShowEvents = false
       ShowInitialPersons = false
-      ShowDetailedPersonStats = false
+      ShowDetailedPersonsStats = false
       ShowDetailedElevatorStatRecords = false }
 
 let standardDurations =
@@ -122,7 +122,7 @@ type Person =
         iEndTime - iArrival
 
     member this.waitForElevatorTime() = this.timeSinceArrival this.EntryClock
-    member this.totalTransportationTime() = this.timeSinceArrival this.ExitClock
+    member this.totalTransportTime() = this.timeSinceArrival this.ExitClock
 
     // For C# comparisons
     override this.ToString() =
@@ -314,6 +314,10 @@ type SimulationPersons =
         randomSeed: int *
         algorithm: RandomPersonsAlgorithm
 
+    member this.getPersonsToCarry =
+        match this with
+        | SimulationPersonsArray pa -> Array.length pa
+        | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> personsToCarry
 
 // Type used for PriorityQueue priority; it's clock + [priority 0 (higher) for persons or priority 1 for elevators]
 // So scheduler will get directly next event with lowest value of clock and priority
@@ -386,10 +390,34 @@ and
 // ----------------------------------------
 // Simulation Results
 
+type SimulationData =
+    {
+      // Elevators/Building
+      Levels: int
+      NumberOfCabins: int
+      Capacity: int
+
+      // Persons
+      FixedPersonsList: bool
+      PersonsToCarry: int
+      ArrivalLength: int option
+      Algorithm: RandomPersonsAlgorithm option
+      RandomSeed: int option
+
+      // Durations
+      AccelerationDuration: int
+      OneLevelFullSpeed: int
+      FullSpeedBeforeDecisionDuration: int
+      OpeningDoorsDuration: int
+      MoveInDuration: int
+      MotorDelayDuration: int }
+
 type PersonsStats =
     { AvgWaitForElevator: float
-      AvgTotalTransport: float
+      MedWaitForElevator: float
       MaxWaitForElevator: int
+      AvgTotalTransport: float
+      MedTotalTransport: float
       MaxTotalTransport: int }
 
 type ElevatorsStats =
@@ -410,7 +438,9 @@ type SimulationStats =
       SimulationEventsCount: int }
 
 type SimulationResult =
-    { SimulationStats: SimulationStats
+    { SimulationData: SimulationData
       ElevatorsStats: ElevatorsStats
       PersonsStats: PersonsStats
-      TransportedPersons: System.Collections.Generic.List<Person> }
+      TransportedPersons: System.Collections.Generic.List<Person>
+      SimulationStats: SimulationStats }
+

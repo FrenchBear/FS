@@ -62,7 +62,7 @@ type PersonsActor with
             printfn "\nPersons for the simulation"
 
             for p in personsArray do
-                printfn "%s" (p.ToString())     // ToString for comparison with C#
+                printfn "%s" (p.ToString()) // ToString for comparison with C#
 
         for p in personsArray do
             let evt =
@@ -72,7 +72,7 @@ type PersonsActor with
                   CabinIndex = 0
                   CreatedOn = p.ArrivalClock }
 
-            this.B.RegisterEvent (PersonEvent evt)
+            this.B.RegisterEvent(PersonEvent evt)
 
     member this.processEvent clk (evt: PersonEvent) =
         if this.B.LogDetails.ShowEvents then
@@ -85,10 +85,14 @@ type PersonsActor with
         match evt.Event with
         | Arrival ->
             Logging.logPersonArrival this.B clk evt.Person
-            
+
             let (Floor iFloor) = evt.Person.EntryFloor
             let originalLanding = this.Elevators.Landings[iFloor].deepCopy ()
-            this.Elevators.Landings[iFloor] <- { this.Elevators.Landings[iFloor] with Persons = evt.Person::this.Elevators.Landings[iFloor].Persons }
+
+            this.Elevators.Landings[iFloor] <-
+                { this.Elevators.Landings[iFloor] with
+                    Persons = evt.Person :: this.Elevators.Landings[iFloor].Persons }
+
             this.Elevators.callElevator clk evt.Person.EntryFloor evt.Person.ExitFloor
 
             let updatedLanding = this.Elevators.Landings[iFloor]
@@ -106,12 +110,12 @@ type PersonsActor with
     member this.getTransportedPersons() = this.TransportedPersons
 
 
-    member this.printDetailedPersonStats() =
-        printfn "Detailed Person stats"
+    static member PrintTransportedPersons(tp: System.Collections.Generic.List<Person>) =
+        printfn "\nTransported persons"
         printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
         printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
 
-        for p in this.TransportedPersons.OrderBy(fun p -> p.ArrivalClock) do
+        for p in tp.OrderBy(fun p -> p.Id) do
             let (PersonId pid) = p.Id
             let (Floor entryFloor) = p.EntryFloor
             let (Floor exitFloor) = p.ExitFloor
@@ -125,10 +129,18 @@ type PersonsActor with
             printfn
                 $"  {pid, 4}  {entryFloor, 7} {exitFloor, 7}  {iArrival, 8} {iEntry, 8} {iExit, 8}  {waitForElevator, 8} {totalTransportTime, 8}"
 
-        printfn ""
-
-    member this.getPersonStats() =
+    member this.getPersonsStats() =
         let ls = List.ofSeq this.TransportedPersons
+
+        let median (l: double list) : double =
+            let ss = l |> List.sort
+            let len = List.length ss
+
+            if len % 2 = 1 then
+                ss[len >>> 1]
+            else
+                double (ss[(len >>> 1) - 1] + ss[len >>> 1]) / 2.0
+
 
         let avgWaitForElevator =
             if List.length ls = 0 then
@@ -136,11 +148,11 @@ type PersonsActor with
             else
                 ls |> List.map (fun p -> double (p.waitForElevatorTime ())) |> List.average
 
-        let avgTotalTransport =
+        let medWaitForElevator =
             if List.length ls = 0 then
                 0.0
             else
-                ls |> List.map (fun p -> double (p.totalTransportationTime ())) |> List.average
+                ls |> List.map (fun p -> double (p.waitForElevatorTime ())) |> median
 
         let maxWaitForElevator =
             if List.length ls = 0 then
@@ -148,21 +160,38 @@ type PersonsActor with
             else
                 ls |> List.map (fun p -> p.waitForElevatorTime ()) |> List.max
 
+        let avgTotalTransport =
+            if List.length ls = 0 then
+                0.0
+            else
+                ls |> List.map (fun p -> double (p.totalTransportTime ())) |> List.average
+
+        let medTotalTransport =
+            if List.length ls = 0 then
+                0.0
+            else
+                ls |> List.map (fun p -> double (p.totalTransportTime ())) |> median
+
         let maxTotalTransport =
             if List.length ls = 0 then
                 0
             else
-                ls |> List.map (fun p -> p.totalTransportationTime ()) |> List.max
+                ls |> List.map (fun p -> p.totalTransportTime ()) |> List.max
 
         // Return a PersonsStats record
         { AvgWaitForElevator = avgWaitForElevator
-          AvgTotalTransport = avgTotalTransport
+          MedWaitForElevator = medWaitForElevator
           MaxWaitForElevator = maxWaitForElevator
+
+          AvgTotalTransport = avgTotalTransport
+          MedTotalTransport = medTotalTransport
           MaxTotalTransport = maxTotalTransport }
 
     static member printPersonStats ps =
         printfn "\nPerson stats"
         printfn "  Average wait for elevator: %.1f" ps.AvgWaitForElevator
-        printfn "  Average total transport:   %.1f" ps.AvgTotalTransport
+        printfn "  Median wait for elevator:  %.1f" ps.MedWaitForElevator
         printfn "  Max wait for elevator:     %d" ps.MaxWaitForElevator
-        printfn "  Max total transportation:  %d" ps.MaxTotalTransport
+        printfn "  Average total transport:   %.1f" ps.AvgTotalTransport
+        printfn "  Median total transport:    %.1f" ps.MedTotalTransport
+        printfn "  Max total transport:       %d" ps.MaxTotalTransport
