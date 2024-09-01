@@ -10,8 +10,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="ParkMillerRandom.fs" />
 		<Compile Include="Types.fs" />
+		<Compile Include="Journal.fs" />
+		<Compile Include="ParkMillerRandom.fs" />
 		<Compile Include="Logging.fs" />
 		<Compile Include="ElevatorBusinessLogic.fs" />
 		<Compile Include="Elevators.fs" />

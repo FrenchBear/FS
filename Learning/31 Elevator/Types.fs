@@ -203,6 +203,94 @@ type Cabin =
         { this with
             _StopRequested = Array.copy this._StopRequested }
 
+
+// ----------------------------------------
+// Simulation parameters
+
+type RandomPersonsAlgorithm =
+    | Ground50Levels50
+    | FullRandom
+
+type SimulationElevators =
+    { Levels: int
+      NumberOfCabins: int
+      Capacity: int }
+
+type SimulationPersons =
+    | SimulationPersonsArray of Person array
+    | SimulationRandomGeneration of
+        personsToCarry: int *
+        arrivalLength: int *
+        randomSeed: int *
+        algorithm: RandomPersonsAlgorithm
+
+    member this.getPersonsToCarry =
+        match this with
+        | SimulationPersonsArray pa -> Array.length pa
+        | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> personsToCarry
+
+
+// ----------------------------------------
+// Simulation Results
+
+type SimulationData =
+    {
+      // Elevators/Building
+      Levels: int
+      NumberOfCabins: int
+      Capacity: int
+
+      // Persons
+      FixedPersonsList: bool
+      PersonsToCarry: int
+      ArrivalLength: int option
+      Algorithm: RandomPersonsAlgorithm option
+      RandomSeed: int option
+
+      // Durations
+      AccelerationDuration: int
+      OneLevelFullSpeed: int
+      FullSpeedBeforeDecisionDuration: int
+      OpeningDoorsDuration: int
+      MoveInDuration: int
+      MotorDelayDuration: int }
+
+type PersonsStats =
+    { AvgWaitForElevator: float
+      MedWaitForElevator: float
+      MaxWaitForElevator: int
+      AvgTotalTransport: float
+      MedTotalTransport: float
+      MaxTotalTransport: int }
+
+type ElevatorsStats =
+    { SimulationDuration: int
+      MotorOnTime: int
+      MotorOffTime: int
+      CabinBusyTime: int
+      CabinIdleTime: int
+      UselessStops: int
+      ClosingDoorsInterrupted: int
+      MaxPersonsInCabin: int
+      TotalFloorsTraveled: int
+      LevelsCovered: int array }
+
+type SimulationStats =
+    { SimulationDuration: int
+      SimulationRealTimeDuration: float
+      SimulationEventsCount: int }
+
+type SimulationResult =
+    { SimulationData: SimulationData
+      ElevatorsStats: ElevatorsStats
+      PersonsStats: PersonsStats
+      TransportedPersons: System.Collections.Generic.List<Person>
+      SimulationStats: SimulationStats }
+
+
+// ----------------------------------------
+// Journal / Statistics
+
 type CabinStatistic =
     | StatCabinIdle
     | StatCabinBusy
@@ -216,6 +304,39 @@ type CabinStatistic =
     | StatUselessStop
     | StatPersonsInCabin of int
     | StatEndSimulation
+
+type JournalRecord =
+    | JournalSimulationData of Clock: Clock * SD: SimulationData
+    | JournalEndSimulationData of Clock: Clock
+
+    | JournalCabinDoorsOpenBegin of Clock: Clock * CabinIndex: int * Floor: Floor
+    | JournalCabinDoorsOpenEnd of Clock: Clock * CabinIndex: int * Floor: Floor
+    | JournalCabinDoorsCloseBegin of Clock: Clock * CabinIndex: int * Floor: Floor
+    | JournalCabinDoorsCloseEnd of Clock: Clock * CabinIndex: int * Floor: Floor
+    | JournalCabinDoorsCloseInterrupt of Clock: Clock * CabinIndex: int * Floor: Floor
+
+    | JournalCabinUselessStop of Clock: Clock * CabinIndex: int
+    | JournalCabinSetDirection of Clock: Clock * CabinIndex: int * Direction: Direction
+    | JournalCabinSetState of Clock: Clock * CabinIndex: int * CabinState: CabinState
+
+    | JournalCabinSetStopRequested of Clock: Clock * CabinIndex: int * ForFloor: Floor
+    | JournalCabinClearStopRequested of Clock: Clock * CabinIndex: int * ForFloor: Floor
+
+    | JournalLandingSetCall of Clock: Clock * CabinIndex: int * Floor: Floor * Direction: Direction
+    | JournalLandingClearCall of Clock: Clock * CabinIndex: int * Floor: Floor * Direction: Direction
+
+    | JournalPersonArrival of Clock: Clock * Id: PersonId * EntryFloor: Floor * ExitFloor: Floor
+
+    | JournalPersonCabinEnterBegin of Clock: Clock * Id: PersonId * CabinIndex: int
+    | JournalPersonCabinEnterEnd of Clock: Clock * Id: PersonId * CabinIndex: int
+    | JournalPersonCabinExitBegin of Clock: Clock * Id: PersonId * CabinIndex: int
+    | JournalPersonCabinExitEnd of Clock: Clock * Id: PersonId * CabinIndex: int
+
+    | JournalMotorAccelerating of Clock: Clock * CabinIndex: int * Floor: Floor * Direction: Direction
+    | JournalMotorFullSpeed of Clock: Clock * CabinIndex: int * Floor: Floor
+    | JournalMotorDecelerating of Clock: Clock * CabinIndex: int * Floor: Floor
+    | JournalMotorOff of Clock: Clock * CabinIndex: int * Floor: Floor
+
 
 type RunningStatus =
     { LastMotorOnClock: Clock
@@ -294,31 +415,6 @@ type CommonEvent =
     | ElevatorEvent of ElevatorEvent
     | PersonEvent of PersonEvent
 
-// ----------------------------------------
-// Simulation data
-
-type RandomPersonsAlgorithm =
-    | Ground50Levels50
-    | FullRandom
-
-type SimulationElevators =
-    { Levels: int
-      NumberOfCabins: int
-      Capacity: int }
-
-type SimulationPersons =
-    | SimulationPersonsArray of Person array
-    | SimulationRandomGeneration of
-        personsToCarry: int *
-        arrivalLength: int *
-        randomSeed: int *
-        algorithm: RandomPersonsAlgorithm
-
-    member this.getPersonsToCarry =
-        match this with
-        | SimulationPersonsArray pa -> Array.length pa
-        | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> personsToCarry
-
 // Type used for PriorityQueue priority; it's clock + [priority 0 (higher) for persons or priority 1 for elevators]
 // So scheduler will get directly next event with lowest value of clock and priority
 [<CustomEquality; CustomComparison>]
@@ -357,11 +453,15 @@ type ClockPriority =
             | _ -> -1
 
 type DataBag =
-    { EventsQueue: System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>
+    { 
       SimulationElevators: SimulationElevators
       SimulationPersons: SimulationPersons
       LogDetails: LogDetails
-      Durations: Durations }
+      Durations: Durations 
+
+      EventsQueue: System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>
+      Journal: System.Collections.Generic.List<JournalRecord>
+    }
 
     member this.RegisterEvent(evt: CommonEvent) =
         match evt with
@@ -386,61 +486,4 @@ and
     { B: DataBag
       TransportedPersons: System.Collections.Generic.List<Person>
       Elevators: ElevatorsActor }
-
-// ----------------------------------------
-// Simulation Results
-
-type SimulationData =
-    {
-      // Elevators/Building
-      Levels: int
-      NumberOfCabins: int
-      Capacity: int
-
-      // Persons
-      FixedPersonsList: bool
-      PersonsToCarry: int
-      ArrivalLength: int option
-      Algorithm: RandomPersonsAlgorithm option
-      RandomSeed: int option
-
-      // Durations
-      AccelerationDuration: int
-      OneLevelFullSpeed: int
-      FullSpeedBeforeDecisionDuration: int
-      OpeningDoorsDuration: int
-      MoveInDuration: int
-      MotorDelayDuration: int }
-
-type PersonsStats =
-    { AvgWaitForElevator: float
-      MedWaitForElevator: float
-      MaxWaitForElevator: int
-      AvgTotalTransport: float
-      MedTotalTransport: float
-      MaxTotalTransport: int }
-
-type ElevatorsStats =
-    { SimulationDuration: int
-      MotorOnTime: int
-      MotorOffTime: int
-      CabinBusyTime: int
-      CabinIdleTime: int
-      UselessStops: int
-      ClosingDoorsInterrupted: int
-      MaxPersonsInCabin: int
-      TotalFloorsTraveled: int
-      LevelsCovered: int array }
-
-type SimulationStats =
-    { SimulationDuration: int
-      SimulationRealTimeDuration: float
-      SimulationEventsCount: int }
-
-type SimulationResult =
-    { SimulationData: SimulationData
-      ElevatorsStats: ElevatorsStats
-      PersonsStats: PersonsStats
-      TransportedPersons: System.Collections.Generic.List<Person>
-      SimulationStats: SimulationStats }
 

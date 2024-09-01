@@ -17,11 +17,7 @@ let testSimple1 () =
 
     // Create DataBag
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          SimulationElevators =
-            { Levels = 6
-              NumberOfCabins = 1
-              Capacity = 6 }
+        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray persone
           LogDetails = { standardLogDetails with ShowLog = true }
           //LogDetails = { 
@@ -31,7 +27,10 @@ let testSimple1 () =
           //    ShowDetailedPersonsStats = false
           //    ShowDetailedElevatorStatRecords = false }
           Durations = standardDurations
-          }
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
+        }
 
     let res = runSimulation b
 
@@ -61,15 +60,14 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
 
     // Create DataBag
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          SimulationElevators =
-            { Levels = 6
-              NumberOfCabins = 1
-              Capacity = 6 }
+        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray tenPersonsArrivingAtTimeZero
           LogDetails = { standardLogDetails with ShowLog = true }
           Durations = standardDurations
-          }
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
+        }
 
     let res = runSimulation b
 
@@ -96,15 +94,14 @@ let testPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     |]
 
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          SimulationElevators =
-            { Levels = 6
-              NumberOfCabins = 1
-              Capacity = 6 }
+        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
           LogDetails = { standardLogDetails with ShowLog = true }
           Durations = standardDurations
-          }
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
+        }
 
     let res = runSimulation b
 
@@ -129,11 +126,7 @@ let testDoorsClosingWhenAPersonArrives () =
     |]
 
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          SimulationElevators =
-            { Levels = 6
-              NumberOfCabins = 1
-              Capacity = 6 }
+        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
           LogDetails = { standardLogDetails with ShowLog = true }
           Durations = { 
@@ -143,7 +136,10 @@ let testDoorsClosingWhenAPersonArrives () =
               OpeningDoorsDuration = 4                  // Need a long closing door for this test
               MoveInDuration = 2 
               MotorDelayDuration = 1 }
-          }
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
+        }
 
     let res = runSimulation b
 
@@ -172,11 +168,7 @@ let testPersonsGoingUpAndDownFromSameFloor () =
     |]
 
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          SimulationElevators =
-            { Levels = 6
-              NumberOfCabins = 1
-              Capacity = 6 }
+        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
           LogDetails = { standardLogDetails with ShowLog = true }
           //LogDetails = { 
@@ -186,7 +178,10 @@ let testPersonsGoingUpAndDownFromSameFloor () =
           //    ShowDetailedPersonStats = true
           //    ShowDetailedElevatorStatRecords = false }
           Durations = standardDurations
-          }
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
+        }
 
     let res = runSimulation b
 
@@ -218,8 +213,7 @@ let testARandomSimulation () =
     printfn "\n---------------------------------------\nTest a random simulation\n"
 
     let b =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, FullRandom) 
           LogDetails = { standardLogDetails with ShowDetailedPersonsStats = false }
           //LogDetails = { 
@@ -229,6 +223,9 @@ let testARandomSimulation () =
           //    ShowDetailedPersonStats = true
           //    ShowDetailedElevatorStatRecords = true }
           Durations = standardDurations
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
     let res = runSimulation b
@@ -244,11 +241,13 @@ let testContinuousSimulation () =
     printfn "\n---------------------------------------\nTest continuous simulation\n"
 
     let refDataBag =
-        { EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
           LogDetails = standardLogDetails
           Durations = standardDurations
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
     printfn "\nContinuous random simulation of variable number of persons over 800s"
@@ -264,12 +263,12 @@ let testContinuousSimulation () =
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
-//testSimple1 ()
+testSimple1 ()
 //testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 //testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 //testDoorsClosingWhenAPersonArrives ()
 //testPersonsGoingUpAndDownFromSameFloor ()
-testARandomSimulation ()
+//testARandomSimulation ()
 //testContinuousSimulation ()
 
 printfn "\nDone."
