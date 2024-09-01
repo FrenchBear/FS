@@ -11,43 +11,47 @@
 [<AutoOpen>]
 module Simulation
 
-let getSimulationData (b: DataBag) =
-    let sd:SimulationData =
-        {
-                Levels = b.SimulationElevators.Levels
-                NumberOfCabins = 1
-                Capacity = b.SimulationElevators.Capacity
-
-                FixedPersonsList = match b.SimulationPersons with
-                                   | SimulationPersonsArray _ -> true
-                                   | _ -> false
-                PersonsToCarry = b.SimulationPersons.getPersonsToCarry
-                ArrivalLength = match b.SimulationPersons with
-                                | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> Some arrivalLength
-                                | _ -> None
-                Algorithm = match b.SimulationPersons with
-                            | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> Some algorithm
-                            | _ -> None
-                RandomSeed = match b.SimulationPersons with
-                             | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> Some randomSeed
-                             | _ -> None
-                AccelerationDuration = b.Durations.AccelerationDuration
-                OneLevelFullSpeed = b.Durations.OneLevelFullSpeed
-                FullSpeedBeforeDecisionDuration = b.Durations.FullSpeedBeforeDecisionDuration
-                OpeningDoorsDuration = b.Durations.OpeningDoorsDuration
-                MoveInDuration = b.Durations.MoveInDuration
-                MotorDelayDuration = b.Durations.MotorDelayDuration
-        }
-    sd
 
 // Find next event in line, process it, and iterates until there are no more events to process
 let runSimulation (b: DataBag) =
+    let sw = System.Diagnostics.Stopwatch.StartNew()
+
     let elevatorsActor = ElevatorsActor.createNew b
     let personsActor = PersonsActor.createNew b elevatorsActor
     elevatorsActor.Persons <- Some personsActor // because of mutual cross-reference between elevatorsActor and personsActor
 
-    let sd = getSimulationData b
-    b.AddJournalRecord (JournalSimulationData (Clock.Zero, sd))
+    elevatorsActor.initialize ()
+    personsActor.initialize ()
+
+    let sd =
+        { Levels = b.SimulationElevators.Levels
+          NumberOfCabins = 1
+          Capacity = b.SimulationElevators.Capacity
+          FixedPersonsList =
+            match b.SimulationPersons with
+            | SimulationPersonsArray _ -> true
+            | _ -> false
+          PersonsToCarry = b.SimulationPersons.getPersonsToCarry
+          ArrivalLength =
+            match b.SimulationPersons with
+            | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> Some arrivalLength
+            | _ -> None
+          Algorithm =
+            match b.SimulationPersons with
+            | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> Some algorithm
+            | _ -> None
+          RandomSeed =
+            match b.SimulationPersons with
+            | SimulationRandomGeneration(personsToCarry, arrivalLength, randomSeed, algorithm) -> Some randomSeed
+            | _ -> None
+          AccelerationDuration = b.Durations.AccelerationDuration
+          OneLevelFullSpeed = b.Durations.OneLevelFullSpeed
+          FullSpeedBeforeDecisionDuration = b.Durations.FullSpeedBeforeDecisionDuration
+          OpeningDoorsDuration = b.Durations.OpeningDoorsDuration
+          MoveInDuration = b.Durations.MoveInDuration
+          MotorDelayDuration = b.Durations.MotorDelayDuration }
+
+    b.AddJournalRecord(JournalSimulationData(Clock.Zero, sd))
 
     if b.LogDetails.ShowLog then
         printfn ""
@@ -55,23 +59,41 @@ let runSimulation (b: DataBag) =
     let rec processNextEvent (clk: Clock) eventCount =
         let hasItem, _, nextClkPri = b.EventsQueue.TryPeek()
 
-        //if clk > Clock 1590 then
-        //    System.Diagnostics.Debugger.Break()
-
         if not hasItem then
-            b.AddJournalRecord (JournalEndSimulationData Clock.Zero)
+            b.AddJournalRecord(JournalEndSimulationData clk)
             let (Clock iClk) = clk
+
+            sw.Stop()
+
+            let ss =
+                { SimulationDuration = iClk
+                  SimulationRealTimeDuration = float (sw.ElapsedMilliseconds) / 1000.0
+                  SimulationEventsCount = eventCount }
 
             if b.LogDetails.ShowLog then
                 printfn "\nEnd simulation clk: %d\n" iClk
 
-            let ps = personsActor.getPersonsStats ()
-            let es = elevatorsActor.getElevatorsStats ()
-            let tp = personsActor.getTransportedPersons ()
-            clk, eventCount, sd, ps, es, tp
+            let (sd, ps, es, tp) = Journal.checkJournalAndComputeStaistics b.Journal true
+
+            let ps1 = personsActor.getPersonsStats ()
+            let es1 = elevatorsActor.getElevatorsStats ()
+            //let tp1 = personsActor.getTransportedPersons ()
+
+            assert(ps=ps1)
+            assert(es=es1)
+            //assert(tp=tp1)
+
+            {
+                SimulationResult.SimulationData = sd
+                SimulationStats = ss
+                ElevatorsStats = es
+                PersonsStats = ps
+                TransportedPersons = tp
+            }
 
         else
             let nextEvent = b.EventsQueue.Dequeue()
+
             match nextEvent with
             | PersonEvent pe ->
                 assert (pe.Clock = nextClkPri.Clock)
@@ -82,35 +104,22 @@ let runSimulation (b: DataBag) =
 
             processNextEvent nextClkPri.Clock (eventCount + 1)
 
-    let sw = System.Diagnostics.Stopwatch.StartNew()
-    elevatorsActor.initialize ()
-    personsActor.initialize ()
-    let (Clock iClk), eventCount, sd, ps, es, tp = processNextEvent (Clock.Zero) 0
-    sw.Stop()
-
-    let ss =
-        { SimulationDuration = iClk
-          SimulationRealTimeDuration = float (sw.ElapsedMilliseconds) / 1000.0
-          SimulationEventsCount = eventCount }
-
-    // Returns a SimulationResult
-    { 
-      SimulationData = sd
-      SimulationStats = ss
-      ElevatorsStats = es
-      PersonsStats = ps
-      TransportedPersons = tp
-    }
+    processNextEvent (Clock.Zero) 0
 
 
-let PrintSimulationData (sd:SimulationData) =
+let PrintSimulationData (sd: SimulationData) =
     printfn "\nSimulation data"
     printfn "  Persons"
 
     if sd.FixedPersonsList then
         printfn "    Fixed persons to carry:  %d" sd.PersonsToCarry
     else
-        printfn "    Random persons to carry: %d, Algorithm: %A, Random seed: %d" sd.PersonsToCarry sd.Algorithm.Value sd.RandomSeed.Value
+        printfn
+            "    Random persons to carry: %d, Algorithm: %A, Random seed: %d"
+            sd.PersonsToCarry
+            sd.Algorithm.Value
+            sd.RandomSeed.Value
+
         printfn "    Arrival length:          %d" sd.ArrivalLength.Value
 
     printfn "  Elevators/Building"

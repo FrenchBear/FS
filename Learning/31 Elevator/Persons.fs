@@ -122,7 +122,7 @@ type PersonsActor with
     member this.getTransportedPersons() = this.TransportedPersons
 
 
-    static member PrintTransportedPersons(tp: System.Collections.Generic.List<Person>) =
+    static member PrintTransportedPersons(tp: Person array) =
         printfn "\nTransported persons"
         printfn "    Id    Entry    Exit   ArrTime   EntryT ExitTime    WaitEl TotTrans"
         printfn "  ----  ------- -------  -------- -------- --------  -------- --------"
@@ -190,20 +190,30 @@ type PersonsActor with
             else
                 ls |> List.map (fun p -> p.totalTransportTime ()) |> List.max
 
+
         // Return a PersonsStats record
         { AvgWaitForElevator = avgWaitForElevator
+          Avg95WaitForElevator = -1.0
           MedWaitForElevator = medWaitForElevator
           MaxWaitForElevator = maxWaitForElevator
+          Max95WaitForElevator = -1
 
           AvgTotalTransport = avgTotalTransport
+          Avg95TotalTransport = -1.0
           MedTotalTransport = medTotalTransport
-          MaxTotalTransport = maxTotalTransport }
+          MaxTotalTransport = maxTotalTransport
+          Max95TotalTransport = -1 }
 
     static member printPersonStats ps =
         printfn "\nPerson stats"
         printfn "  Average wait for elevator: %.1f" ps.AvgWaitForElevator
         printfn "  Median wait for elevator:  %.1f" ps.MedWaitForElevator
+        printfn "  Avg95 wait for elevator:   %.1f" ps.Avg95WaitForElevator
         printfn "  Max wait for elevator:     %d" ps.MaxWaitForElevator
+        printfn "  Max95 wait for elevator:   %d" ps.Max95WaitForElevator
+
         printfn "  Average total transport:   %.1f" ps.AvgTotalTransport
         printfn "  Median total transport:    %.1f" ps.MedTotalTransport
+        printfn "  Avg95 total transport:     %.1f" ps.Avg95TotalTransport
         printfn "  Max total transport:       %d" ps.MaxTotalTransport
+        printfn "  Max95 total transport:     %d" ps.Max95TotalTransport

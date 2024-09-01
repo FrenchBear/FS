@@ -144,8 +144,8 @@ let testDoorsClosingWhenAPersonArrives () =
     let res = runSimulation b
 
     assert (res.SimulationStats.SimulationDuration = 60)
-    let tp2 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 2)
-    let tp3 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 3)
+    let tp2 = res.TransportedPersons |> Array.find (fun p -> p.Id = PersonId 2)
+    let tp3 = res.TransportedPersons |> Array.find (fun p -> p.Id = PersonId 3)
     assert (tp2.EntryClock = Some(Clock 28))
     assert (tp3.EntryClock = Some(Clock 30))
 
@@ -186,10 +186,11 @@ let testPersonsGoingUpAndDownFromSameFloor () =
     let res = runSimulation b
 
     assert (res.SimulationStats.SimulationDuration = 81)
-    let tp1 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 1)
-    let tp2 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 2)
-    let tp3 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 3)
-    let tp4 = res.TransportedPersons.Find (fun p -> p.Id = PersonId 4)
+
+    let tp1 = res.TransportedPersons |> Array.find (fun p -> p.Id = PersonId 1)
+    let tp2 = res.TransportedPersons |> Array.find (fun p -> p.Id = PersonId 2)
+    let tp3 = res.TransportedPersons |> Array.find (fun p -> p.Id = PersonId 3)
+    let tp4 = res.TransportedPersons |> Array.find (fun p -> p.Id = PersonId 4)
 
     assert (tp1.EntryClock = Some(Clock 21))
     assert (tp3.EntryClock = Some(Clock 23))

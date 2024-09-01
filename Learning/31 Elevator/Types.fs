@@ -257,11 +257,16 @@ type SimulationData =
 
 type PersonsStats =
     { AvgWaitForElevator: float
+      Avg95WaitForElevator: float
       MedWaitForElevator: float
       MaxWaitForElevator: int
+      Max95WaitForElevator: int
+
       AvgTotalTransport: float
+      Avg95TotalTransport: float
       MedTotalTransport: float
-      MaxTotalTransport: int }
+      MaxTotalTransport: int
+      Max95TotalTransport: int }
 
 type ElevatorsStats =
     { SimulationDuration: int
@@ -284,7 +289,7 @@ type SimulationResult =
     { SimulationData: SimulationData
       ElevatorsStats: ElevatorsStats
       PersonsStats: PersonsStats
-      TransportedPersons: System.Collections.Generic.List<Person>
+      TransportedPersons: Person array
       SimulationStats: SimulationStats }
 
 
@@ -319,7 +324,7 @@ type JournalRecord =
     | JournalCabinSetDirection of Clock: Clock * CabinIndex: int * Direction: Direction
     | JournalCabinSetState of Clock: Clock * CabinIndex: int * CabinState: CabinState
 
-    | JournalCabinSetStopRequested of Clock: Clock * CabinIndex: int * loor: Floor
+    | JournalCabinSetStopRequested of Clock: Clock * CabinIndex: int * Floor: Floor
     | JournalCabinClearStopRequested of Clock: Clock * CabinIndex: int * Floor: Floor
 
     | JournalLandingSetCall of Clock: Clock * CabinIndex: int * Floor: Floor * Direction: Direction

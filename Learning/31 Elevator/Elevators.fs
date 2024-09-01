@@ -271,7 +271,7 @@ type ElevatorsActor with
 
                                 if not (this.Cabins[0].getStopRequested p.ExitFloor) then
                                     this.Cabins[0].setStopRequested p.ExitFloor
-                                    this.B.AddJournalRecord(JournalCabinSetStopRequested(Clock = clk, CabinIndex = 0, loor = p.ExitFloor))
+                                    this.B.AddJournalRecord(JournalCabinSetStopRequested(Clock = clk, CabinIndex = 0, Floor = p.ExitFloor))
 
                                 let newDirection =
                                     if this.Cabins[0].Direction = NoDirection then
@@ -279,13 +279,14 @@ type ElevatorsActor with
                                     else
                                         this.Cabins[0].Direction
 
+                                if this.Cabins[0].Direction<>newDirection then
+                                    this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction=newDirection))
+
                                 // Add person to cabin
                                 this.Cabins[0] <-
                                     { this.Cabins[0] with
                                         Persons = updatedPerson :: this.Cabins[0].Persons
                                         Direction = newDirection }
-                                if this.Cabins[0].Direction<>newDirection then
-                                    this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction=newDirection))
 
                                 // Remove person from landing
                                 let lp = this.Landings[iFloor].Persons
@@ -452,16 +453,19 @@ type ElevatorsActor with
         let updatedLanding = this.Landings[iFloor]
         Logging.logLandingUpdate this.B clk this.Cabins[0].Floor originalLanding updatedLanding
 
-        if originalLanding.CallUp<>updatedLanding.CallUp then
-            if updatedLanding.CallUp then
-                this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up))
-            else
-                this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up))
-        if originalLanding.CallDown<>updatedLanding.CallDown then
-            if updatedLanding.CallDown then
-                this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
-            else
-                this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
+        // Decision event is special, changes floor, and breaks originalLanging/updatedLanding comparison
+        // Anyway, Devision event doesn't update Landing
+        if evt.Event<>Decision then
+            if originalLanding.CallUp<>updatedLanding.CallUp then
+                if updatedLanding.CallUp then
+                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up))
+                else
+                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up))
+            if originalLanding.CallDown<>updatedLanding.CallDown then
+                if updatedLanding.CallDown then
+                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
+                else
+                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
 
 
     member this.getElevatorsStats() =
