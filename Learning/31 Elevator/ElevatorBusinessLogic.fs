@@ -70,6 +70,7 @@ type ElevatorsActor with
             // If we call elevator from the floor the cabin is currently waiting, then we just have to open doors
             if cabin.Floor = entry then
                 this.recordStat clk 0 StatCabinBusy
+                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, CabinState = Busy))
 
                 this.Cabins[0] <-
                     { cabin with
@@ -81,17 +82,24 @@ type ElevatorsActor with
                       CabinIndex = 0
                       Event = EndOpeningDoors
                       CreatedOn = clk })
+                this.B.AddJournalRecord(JournalCabinDoorsOpenBegin(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
             // Otherwise we start accelerating
             else
-                this.recordStat clk 0 StatCabinBusy
-                this.recordStat clk 0 StatMotorAccelerating
-
+                let oldDirection = this.Cabins[0].Direction
                 this.Cabins[0] <-
                     { cabin with
                         CabinStatus = Busy
                         MotorStatus = Accelerating
                         Direction = if (entry > cabin.Floor) then Up else Down }
+
+                this.recordStat clk 0 StatCabinBusy
+                this.recordStat clk 0 StatMotorAccelerating
+
+                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, CabinState = Busy))
+                if this.Cabins[0].Direction<>oldDirection then
+                    this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = this.Cabins[0].Direction))
+                this.B.AddJournalRecord(JournalMotorAccelerating(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = this.Cabins[0].Direction))
 
                 this.B.RegisterEvent (ElevatorEvent
                     { ElevatorEvent.Clock = clk.addOffset this.B.Durations.AccelerationDuration
@@ -108,6 +116,7 @@ type ElevatorsActor with
                 // Cabin is closing doors, so we cancel current event, and register a doors opening event with correct amount of time
                 // Since it's complex to find next elevator event in the queue (there could be person events before), do it in a separate function
                 this.recordStat clk 0 StatClosingDoorsInterrupted
+                this.B.AddJournalRecord(JournalCabinDoorsCloseInterrupt(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
                 let remainigTime = this.getEndClosingDoorEventRemainingTime clk
 
@@ -131,6 +140,8 @@ type ElevatorsActor with
             this.Cabins[0] <-
                 { cabin with
                     Direction = if (entry > cabin.Floor) then Up else Down }
+            this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = this.Cabins[0].Direction))
+
 
         Logging.logCabinUpdate this.B clk originalCabin this.Cabins[0]
 
@@ -181,6 +192,7 @@ type ElevatorsActor with
               Event = EndMovingFullSpeed
               CreatedOn = clk }
         else
+            this.B.AddJournalRecord(JournalMotorFullSpeed(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
             this.recordStat clk 0 StatMotorFullSpeed
 
             { ElevatorEvent.Clock = clk.addOffset this.B.Durations.OneLevelFullSpeed

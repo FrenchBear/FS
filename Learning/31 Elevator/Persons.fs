@@ -85,6 +85,7 @@ type PersonsActor with
         match evt.Event with
         | Arrival ->
             Logging.logPersonArrival this.B clk evt.Person
+            this.B.AddJournalRecord(JournalPersonArrival(Clock = clk, Id = evt.Person.Id, EntryFloor = evt.Person.EntryFloor, ExitFloor = evt.Person.ExitFloor))
 
             let (Floor iFloor) = evt.Person.EntryFloor
             let originalLanding = this.Elevators.Landings[iFloor].deepCopy ()
@@ -98,12 +99,23 @@ type PersonsActor with
             let updatedLanding = this.Elevators.Landings[iFloor]
             Logging.logLandingUpdate this.B clk evt.Person.EntryFloor originalLanding updatedLanding
 
+            if originalLanding.CallUp<>updatedLanding.CallUp then
+                if updatedLanding.CallUp then
+                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = evt.Person.EntryFloor, Direction = Up))
+                else
+                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = evt.Person.EntryFloor, Direction = Up))
+            if originalLanding.CallDown<>updatedLanding.CallDown then
+                if updatedLanding.CallDown then
+                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = evt.Person.EntryFloor, Direction = Down))
+                else
+                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = evt.Person.EntryFloor, Direction = Down))
+
         | EndEnterCabin ->
-            // We don't write records to Journet in F# yet
-            ()
+            this.B.AddJournalRecord(JournalPersonCabinEnterEnd(Clock = clk, CabinIndex = 0, Id = evt.Person.Id))
 
         | ExitCabin ->
             this.TransportedPersons.Add(evt.Person)
+            this.B.AddJournalRecord(JournalPersonCabinExitEnd(Clock = clk, CabinIndex = 0, Id = evt.Person.Id))
             Logging.logPersonExit this.B clk evt.Person
 
 

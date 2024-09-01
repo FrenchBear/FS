@@ -79,9 +79,8 @@ type ElevatorsActor with
                       CreatedOn = clk }
             )
 
-            this.Cabins[0] <-
-                { this.Cabins[0] with
-                    MotorStatus = FullSpeed }
+            this.Cabins[0] <- { this.Cabins[0] with MotorStatus = FullSpeed } 
+            this.B.AddJournalRecord(JournalMotorFullSpeed(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
         | Decision ->
             assert (this.Cabins[0].MotorStatus = FullSpeed)
@@ -113,6 +112,7 @@ type ElevatorsActor with
             )
 
             this.recordStat clk 0 StatMotorDecelerating
+            this.B.AddJournalRecord(JournalMotorDecelerating(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
             this.Cabins[0] <-
                 { this.Cabins[0] with
@@ -125,6 +125,7 @@ type ElevatorsActor with
             assert (this.Cabins[0].CabinStatus = Busy)
 
             this.recordStat clk 0 StatMotorOff
+            this.B.AddJournalRecord(JournalMotorOff(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
             // Ok, we arrive at a floor with stop requested
             this.B.RegisterEvent(
@@ -136,7 +137,9 @@ type ElevatorsActor with
             )
 
             // Clear the stop requested for current floor
-            this.Cabins[0].clearStopRequested this.Cabins[0].Floor
+            if this.Cabins[0].getStopRequested this.Cabins[0].Floor then
+                this.Cabins[0].clearStopRequested this.Cabins[0].Floor
+                this.B.AddJournalRecord(JournalCabinClearStopRequested(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
             // Decide if we still continue with the same direction (returns true) or not (returns false)
             let rec checkRequestsOneDirection (floor: Floor) direction =
@@ -167,12 +170,16 @@ type ElevatorsActor with
                     else
                         NoDirection
 
+            let oldDirection = this.Cabins[0].Direction
             let newDirection = checkRequests this.Cabins[0].Floor this.Cabins[0].Direction
 
             this.Cabins[0] <-
                 { this.Cabins[0] with
                     Direction = newDirection
                     MotorStatus = Off }
+
+            if newDirection<>oldDirection then
+                this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = newDirection))
 
         | EndMotorDelay ->
             assert (this.Cabins[0].MotorStatus = Off)
@@ -182,6 +189,8 @@ type ElevatorsActor with
             this.Cabins[0] <-
                 { this.Cabins[0] with
                     DoorStatus = Opening }
+
+            this.B.AddJournalRecord(JournalCabinDoorsOpenBegin(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
             this.B.RegisterEvent(
                 ElevatorEvent
@@ -219,6 +228,8 @@ type ElevatorsActor with
                               CreatedOn = clk }
                     )
 
+                    this.B.AddJournalRecord(JournalPersonCabinExitBegin(Clock = clk, CabinIndex = 0, Id = p.Id))
+
                     // Person event to record cabin exit for final stats
                     let evt2 =
                         { PersonEvent.Clock = clk.addOffset this.B.Durations.MoveInDuration
@@ -239,6 +250,7 @@ type ElevatorsActor with
                     if List.length this.Cabins[0].Persons = this.Cabins[0].Capacity then
                         if doorsJustOpening then
                             this.recordStat clk 0 StatUselessStop
+                            this.B.AddJournalRecord(JournalCabinUselessStop(Clock = clk, CabinIndex = 0))
 
                         false
                     else
@@ -255,7 +267,11 @@ type ElevatorsActor with
 
                             if (personGoesInSameDirectionAsCabin) then
                                 let updatedPerson = { p with EntryClock = Some clk }
-                                this.Cabins[0].setStopRequested p.ExitFloor
+                                this.B.AddJournalRecord(JournalPersonCabinEnterBegin(Clock = clk, CabinIndex = 0, Id = p.Id))
+
+                                if not (this.Cabins[0].getStopRequested p.ExitFloor) then
+                                    this.Cabins[0].setStopRequested p.ExitFloor
+                                    this.B.AddJournalRecord(JournalCabinSetStopRequested(Clock = clk, CabinIndex = 0, loor = p.ExitFloor))
 
                                 let newDirection =
                                     if this.Cabins[0].Direction = NoDirection then
@@ -268,6 +284,8 @@ type ElevatorsActor with
                                     { this.Cabins[0] with
                                         Persons = updatedPerson :: this.Cabins[0].Persons
                                         Direction = newDirection }
+                                if this.Cabins[0].Direction<>newDirection then
+                                    this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction=newDirection))
 
                                 // Remove person from landing
                                 let lp = this.Landings[iFloor].Persons
@@ -342,10 +360,9 @@ type ElevatorsActor with
 
             if this.Cabins[0].DoorStatus = Opening then
                 this.recordStat clk 0 StatDoorsOpen
+                this.B.AddJournalRecord(JournalCabinDoorsOpenEnd(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
-            this.Cabins[0] <-
-                { this.Cabins[0] with
-                    DoorStatus = Open }
+            this.Cabins[0] <- { this.Cabins[0] with DoorStatus = Open }
 
             if not (allowMoveOut ()) then
                 if not (allowMoveIn ()) then
@@ -364,6 +381,9 @@ type ElevatorsActor with
                               CreatedOn = clk }
                     )
 
+                    this.B.AddJournalRecord(JournalCabinDoorsCloseBegin(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
+
+
         | EndClosingDoors when this.Cabins[0].IgnoreNextEndClosingDoorsEvent ->
             this.Cabins[0] <-
                 { this.Cabins[0] with
@@ -377,7 +397,7 @@ type ElevatorsActor with
             this.Cabins[0] <-
                 { this.Cabins[0] with
                     DoorStatus = Closed }
-
+            this.B.AddJournalRecord(JournalCabinDoorsCloseEnd(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
             this.recordStat clk 0 StatDoorsClosed
 
             match this.Cabins[0].Direction with
@@ -392,7 +412,7 @@ type ElevatorsActor with
                 this.Cabins[0] <-
                     { this.Cabins[0] with
                         CabinStatus = Idle }
-
+                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, CabinState = Idle))
                 this.recordStat clk 0 StatCabinIdle
 
             | _ ->
@@ -413,6 +433,7 @@ type ElevatorsActor with
             this.Cabins[0] <-
                 { this.Cabins[0] with // Beware, cabin has already been updated...
                     MotorStatus = Accelerating }
+            this.B.AddJournalRecord(JournalMotorAccelerating(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = this.Cabins[0].Direction))
 
             this.B.RegisterEvent(
                 ElevatorEvent
@@ -430,6 +451,18 @@ type ElevatorsActor with
         let (Floor iFloor) = this.Cabins[0].Floor
         let updatedLanding = this.Landings[iFloor]
         Logging.logLandingUpdate this.B clk this.Cabins[0].Floor originalLanding updatedLanding
+
+        if originalLanding.CallUp<>updatedLanding.CallUp then
+            if updatedLanding.CallUp then
+                this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up))
+            else
+                this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up))
+        if originalLanding.CallDown<>updatedLanding.CallDown then
+            if updatedLanding.CallDown then
+                this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
+            else
+                this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
+
 
     member this.getElevatorsStats() =
         // Register special stat event to make sure final states are cumulated correctly

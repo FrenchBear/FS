@@ -46,6 +46,9 @@ let runSimulation (b: DataBag) =
     let personsActor = PersonsActor.createNew b elevatorsActor
     elevatorsActor.Persons <- Some personsActor // because of mutual cross-reference between elevatorsActor and personsActor
 
+    let sd = getSimulationData b
+    b.AddJournalRecord (JournalSimulationData (Clock.Zero, sd))
+
     if b.LogDetails.ShowLog then
         printfn ""
 
@@ -56,12 +59,12 @@ let runSimulation (b: DataBag) =
         //    System.Diagnostics.Debugger.Break()
 
         if not hasItem then
+            b.AddJournalRecord (JournalEndSimulationData Clock.Zero)
             let (Clock iClk) = clk
 
             if b.LogDetails.ShowLog then
                 printfn "\nEnd simulation clk: %d\n" iClk
 
-            let sd = getSimulationData b
             let ps = personsActor.getPersonsStats ()
             let es = elevatorsActor.getElevatorsStats ()
             let tp = personsActor.getTransportedPersons ()

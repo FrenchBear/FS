@@ -319,8 +319,8 @@ type JournalRecord =
     | JournalCabinSetDirection of Clock: Clock * CabinIndex: int * Direction: Direction
     | JournalCabinSetState of Clock: Clock * CabinIndex: int * CabinState: CabinState
 
-    | JournalCabinSetStopRequested of Clock: Clock * CabinIndex: int * ForFloor: Floor
-    | JournalCabinClearStopRequested of Clock: Clock * CabinIndex: int * ForFloor: Floor
+    | JournalCabinSetStopRequested of Clock: Clock * CabinIndex: int * loor: Floor
+    | JournalCabinClearStopRequested of Clock: Clock * CabinIndex: int * Floor: Floor
 
     | JournalLandingSetCall of Clock: Clock * CabinIndex: int * Floor: Floor * Direction: Direction
     | JournalLandingClearCall of Clock: Clock * CabinIndex: int * Floor: Floor * Direction: Direction
@@ -463,10 +463,13 @@ type DataBag =
       Journal: System.Collections.Generic.List<JournalRecord>
     }
 
-    member this.RegisterEvent(evt: CommonEvent) =
+    member this.RegisterEvent evt =
         match evt with
         | ElevatorEvent ee -> this.EventsQueue.Enqueue(evt, { Clock = ee.Clock; Priority = 1 })
         | PersonEvent pe -> this.EventsQueue.Enqueue(evt, { Clock = pe.Clock; Priority = 0 }) // Higher priority
+
+    member this.AddJournalRecord record =
+        this.Journal.Add(record)
 
 // ----------------------------------------
 // Actors
