@@ -294,21 +294,7 @@ type SimulationResult =
 
 
 // ----------------------------------------
-// Journal / Statistics
-
-type CabinStatistic =
-    | StatCabinIdle
-    | StatCabinBusy
-    | StatMotorOff
-    | StatMotorAccelerating
-    | StatMotorFullSpeed
-    | StatMotorDecelerating
-    | StatDoorsOpen
-    | StatDoorsClosed
-    | StatClosingDoorsInterrupted
-    | StatUselessStop
-    | StatPersonsInCabin of int
-    | StatEndSimulation
+// Journal
 
 type JournalRecord =
     | JournalSimulationData of Clock: Clock * SD: SimulationData
@@ -482,7 +468,6 @@ type DataBag =
 type ElevatorsActor =
     { B: DataBag
       Cabins: Cabin array
-      Statistics: (Clock * CabinStatistic) list array
       Landings: Landing array
       mutable Persons: PersonsActor option } // Since Elevators contains a Persons reference, and Persons a Elevators reference, at least one is mutable
 

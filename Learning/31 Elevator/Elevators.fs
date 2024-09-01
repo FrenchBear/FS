@@ -28,7 +28,6 @@ type ElevatorsActor with
 
         { B = b
           Cabins = Array.create b.SimulationElevators.NumberOfCabins cabinInitialState
-          Statistics = Array.create b.SimulationElevators.NumberOfCabins []
           Landings = Array.create b.SimulationElevators.Levels landingInitialState
           Persons = None }
 
@@ -42,11 +41,6 @@ type ElevatorsActor with
         assert (this.Cabins[0].Direction = NoDirection)
         assert (this.Cabins[0].CabinStatus = Idle)
         assert (this.Cabins[0].Floor = Floor.Zero)
-
-        this.recordStat cz 0 StatCabinIdle
-        this.recordStat cz 0 StatMotorOff
-        this.recordStat cz 0 StatDoorsClosed
-        this.recordStat cz 0 (StatPersonsInCabin 0)
 
 
     member this.processEvent (clk: Clock) (evt: ElevatorEvent) =
@@ -111,7 +105,6 @@ type ElevatorsActor with
                       CreatedOn = clk }
             )
 
-            this.recordStat clk 0 StatMotorDecelerating
             this.B.AddJournalRecord(JournalMotorDecelerating(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
             this.Cabins[0] <-
@@ -124,7 +117,6 @@ type ElevatorsActor with
             assert (this.Cabins[0].Direction <> NoDirection)
             assert (this.Cabins[0].CabinStatus = Busy)
 
-            this.recordStat clk 0 StatMotorOff
             this.B.AddJournalRecord(JournalMotorOff(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
             // Ok, we arrive at a floor with stop requested
@@ -249,7 +241,6 @@ type ElevatorsActor with
                 let rec processPersonGoingInSameDirectionAsCabin lst =
                     if List.length this.Cabins[0].Persons = this.Cabins[0].Capacity then
                         if doorsJustOpening then
-                            this.recordStat clk 0 StatUselessStop
                             this.B.AddJournalRecord(JournalCabinUselessStop(Clock = clk, CabinIndex = 0))
 
                         false
@@ -360,7 +351,6 @@ type ElevatorsActor with
             assert (this.Cabins[0].CabinStatus = Busy)
 
             if this.Cabins[0].DoorStatus = Opening then
-                this.recordStat clk 0 StatDoorsOpen
                 this.B.AddJournalRecord(JournalCabinDoorsOpenEnd(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
             this.Cabins[0] <- { this.Cabins[0] with DoorStatus = Open }
@@ -371,8 +361,6 @@ type ElevatorsActor with
                     this.Cabins[0] <-
                         { this.Cabins[0] with
                             DoorStatus = Closing }
-
-                    this.recordStat clk 0 (StatPersonsInCabin(List.length this.Cabins[0].Persons))
 
                     this.B.RegisterEvent(
                         ElevatorEvent
@@ -399,7 +387,6 @@ type ElevatorsActor with
                 { this.Cabins[0] with
                     DoorStatus = Closed }
             this.B.AddJournalRecord(JournalCabinDoorsCloseEnd(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
-            this.recordStat clk 0 StatDoorsClosed
 
             match this.Cabins[0].Direction with
             | NoDirection ->
@@ -414,7 +401,6 @@ type ElevatorsActor with
                     { this.Cabins[0] with
                         CabinStatus = Idle }
                 this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, CabinState = Idle))
-                this.recordStat clk 0 StatCabinIdle
 
             | _ ->
                 this.B.RegisterEvent(
@@ -444,8 +430,6 @@ type ElevatorsActor with
                       CreatedOn = clk }
             )
 
-            this.recordStat clk 0 StatMotorAccelerating
-
 
         Logging.logCabinUpdate this.B clk originalCabin this.Cabins[0]
 
@@ -466,129 +450,6 @@ type ElevatorsActor with
                     this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
                 else
                     this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
-
-
-    member this.getElevatorsStats() =
-        // Register special stat event to make sure final states are cumulated correctly
-        let (clk, _) = List.head this.Statistics[0]
-        this.recordStat clk 0 StatEndSimulation
-
-        let (Clock duration) = clk
-        let elsl = List.rev this.Statistics[0]
-
-        if this.B.LogDetails.ShowDetailedElevatorStatRecords then
-            printfn "\nDetailed Elevator Stat Records"
-
-            for clk, ce in elsl do
-                let (Clock iClk) = clk
-                printf $"clk: {iClk, 4}  "
-                printfn "%0A" ce
-
-        let rec cumulate list (acc: RunningStatus) =
-            match list with
-            | [] -> acc
-            | (clk: Clock, ce: CabinStatistic) :: tail ->
-                let newAcc =
-                    match ce with
-                    | StatMotorOff ->
-                        assert (clk = Clock.Zero || acc.IsMotorOn = true)
-
-                        if clk > Clock.Zero then
-                            acc.LevelsCovered[acc.PersonsInCabin] <- acc.LevelsCovered[acc.PersonsInCabin] + 1
-
-
-                        { acc with
-                            MotorOnTime = acc.MotorOnTime + (clk.minus acc.LastMotorOnClock)
-                            IsMotorOn = false
-                            LastMotorOffClock = clk }
-
-                    | StatMotorAccelerating ->
-                        { acc with
-                            MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOffClock)
-                            IsMotorOn = true
-                            LastMotorOnClock = clk }
-
-                    | StatMotorFullSpeed ->
-                        acc.LevelsCovered[acc.PersonsInCabin] <- acc.LevelsCovered[acc.PersonsInCabin] + 1
-                        acc
-
-                    | StatCabinIdle ->
-                        assert (clk = Clock.Zero || acc.IsCabinBusy = true)
-
-                        { acc with
-                            CabinBusyTime = acc.CabinBusyTime + (clk.minus acc.LastCabinBusyClock)
-                            IsCabinBusy = false
-                            LastCabinIdleClock = clk }
-
-                    | StatCabinBusy ->
-                        assert (acc.IsCabinBusy = false)
-
-                        { acc with
-                            CabinIdleTime = acc.CabinIdleTime + (clk.minus acc.LastCabinIdleClock)
-                            IsCabinBusy = true
-                            LastCabinBusyClock = clk }
-
-                    | StatPersonsInCabin np ->
-                        { acc with
-                            MaxPersonsInCabin = max acc.MaxPersonsInCabin np
-                            PersonsInCabin = np }
-
-                    | StatEndSimulation ->
-                        assert (acc.IsMotorOn = false)
-                        assert (acc.IsCabinBusy = false)
-
-                        { acc with
-                            MotorOffTime = acc.MotorOffTime + (clk.minus acc.LastMotorOffClock)
-                            CabinIdleTime = acc.CabinIdleTime + (clk.minus acc.LastCabinIdleClock)
-                            LastMotorOffClock = clk }
-
-                    | StatUselessStop ->
-                        { acc with
-                            UselessStops = acc.UselessStops + 1 }
-
-                    | StatClosingDoorsInterrupted ->
-                        { acc with
-                            ClosingDoorsInterrupted = acc.ClosingDoorsInterrupted + 1 }
-
-                    | _ -> acc
-
-                cumulate tail newAcc
-
-        let start =
-            { LastMotorOnClock = Clock.Zero
-              LastMotorOffClock = Clock.Zero
-              IsMotorOn = false
-              MotorOnTime = 0
-              MotorOffTime = 0
-
-              LastCabinBusyClock = Clock.Zero
-              LastCabinIdleClock = Clock.Zero
-              IsCabinBusy = false
-              CabinBusyTime = 0
-              CabinIdleTime = 0
-
-              UselessStops = 0
-              ClosingDoorsInterrupted = 0
-              PersonsInCabin = 0
-              MaxPersonsInCabin = 0
-              LevelsCovered = Array.create (this.Cabins[0].Capacity + 1) 0 }
-
-        let final = cumulate elsl start
-        assert (duration = final.MotorOnTime + final.MotorOffTime)
-        assert (duration = final.CabinBusyTime + final.CabinIdleTime)
-        assert (final.PersonsInCabin = 0)
-
-        // Return an ElevatorStats record
-        { SimulationDuration = duration
-          MotorOnTime = final.MotorOnTime
-          MotorOffTime = final.MotorOffTime
-          CabinBusyTime = final.CabinBusyTime
-          CabinIdleTime = final.CabinIdleTime
-          UselessStops = final.UselessStops
-          ClosingDoorsInterrupted = final.ClosingDoorsInterrupted
-          MaxPersonsInCabin = final.MaxPersonsInCabin
-          TotalFloorsTraveled = Array.sum final.LevelsCovered
-          LevelsCovered = final.LevelsCovered }
 
     static member printElevatorStats(es: ElevatorsStats) =
         printfn "\nElevator stats"

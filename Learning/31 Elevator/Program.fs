@@ -241,19 +241,19 @@ let testARandomSimulation () =
 let testContinuousSimulation () =
     printfn "\n---------------------------------------\nTest continuous simulation\n"
 
-    let refDataBag =
-        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
-          SimulationPersons = SimulationRandomGeneration(10, 800, 1, Ground50Levels50) 
-          LogDetails = standardLogDetails
-          Durations = standardDurations
-
-          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
-          Journal = new System.Collections.Generic.List<JournalRecord>()
-        }
 
     printfn "\nContinuous random simulation of variable number of persons over 800s"
     for np in 0..5..130 do
-        let b = {refDataBag with SimulationPersons = SimulationRandomGeneration(np, 800, 1, Ground50Levels50) }
+        let b =
+            { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+              SimulationPersons = SimulationRandomGeneration(np, 800, 1, Ground50Levels50)
+              LogDetails = standardLogDetails
+              Durations = standardDurations
+
+              EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+              Journal = new System.Collections.Generic.List<JournalRecord>()
+            }
+
         let res = runSimulation b
 
         printf "p=%3d: wait = %5.1f " np res.PersonsStats.AvgWaitForElevator
@@ -265,11 +265,11 @@ System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
 testSimple1 ()
-//testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
-//testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
-//testDoorsClosingWhenAPersonArrives ()
-//testPersonsGoingUpAndDownFromSameFloor ()
-//testARandomSimulation ()
-//testContinuousSimulation ()
+testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
+testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+testDoorsClosingWhenAPersonArrives ()
+testPersonsGoingUpAndDownFromSameFloor ()
+testARandomSimulation ()
+testContinuousSimulation ()
 
 printfn "\nDone."

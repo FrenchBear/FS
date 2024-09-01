@@ -9,9 +9,6 @@ module ElevatorBusinessLogic
 
 type ElevatorsActor with
 
-    member this.recordStat clk ixCabin stat =
-        this.Statistics[ixCabin] <- (clk, stat) :: this.Statistics[ixCabin]
-
     member this.getEndClosingDoorEventRemainingTime clk =
         let rec findEndClosingDoorsEvent (lst: (struct (CommonEvent * ClockPriority)) list) =
             let hasItem, _, nextClkPri = this.B.EventsQueue.TryPeek()
@@ -69,7 +66,6 @@ type ElevatorsActor with
 
             // If we call elevator from the floor the cabin is currently waiting, then we just have to open doors
             if cabin.Floor = entry then
-                this.recordStat clk 0 StatCabinBusy
                 this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, CabinState = Busy))
 
                 this.Cabins[0] <-
@@ -93,9 +89,6 @@ type ElevatorsActor with
                         MotorStatus = Accelerating
                         Direction = if (entry > cabin.Floor) then Up else Down }
 
-                this.recordStat clk 0 StatCabinBusy
-                this.recordStat clk 0 StatMotorAccelerating
-
                 this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, CabinState = Busy))
                 if this.Cabins[0].Direction<>oldDirection then
                     this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = this.Cabins[0].Direction))
@@ -115,7 +108,6 @@ type ElevatorsActor with
             if cabin.DoorStatus = Closing then
                 // Cabin is closing doors, so we cancel current event, and register a doors opening event with correct amount of time
                 // Since it's complex to find next elevator event in the queue (there could be person events before), do it in a separate function
-                this.recordStat clk 0 StatClosingDoorsInterrupted
                 this.B.AddJournalRecord(JournalCabinDoorsCloseInterrupt(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
                 let remainigTime = this.getEndClosingDoorEventRemainingTime clk
@@ -193,7 +185,6 @@ type ElevatorsActor with
               CreatedOn = clk }
         else
             this.B.AddJournalRecord(JournalMotorFullSpeed(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
-            this.recordStat clk 0 StatMotorFullSpeed
 
             { ElevatorEvent.Clock = clk.addOffset this.B.Durations.OneLevelFullSpeed
               CabinIndex = 0

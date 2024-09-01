@@ -9,7 +9,7 @@ module Journal
 
 open System.Linq
 
-let checkJournalAndComputeStaistics (journal: System.Collections.Generic.List<JournalRecord>) showJournal =
+let checkJournalAndComputeStatistics (journal: System.Collections.Generic.List<JournalRecord>) showJournal =
     if showJournal then
         printfn "\nValidating journal"
 
@@ -18,9 +18,6 @@ let checkJournalAndComputeStaistics (journal: System.Collections.Generic.List<Jo
     let mutable cabinDirection = NoDirection
     let mutable cabinState = Idle
     let mutable motorState = Off
-
-    //Person[] persons
-    //bool[] personsEndEnterCabin, personsEndExitCabin
 
     let (sd: SimulationData) =
         match journal[0] with

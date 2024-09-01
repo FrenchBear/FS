@@ -73,15 +73,7 @@ let runSimulation (b: DataBag) =
             if b.LogDetails.ShowLog then
                 printfn "\nEnd simulation clk: %d\n" iClk
 
-            let (sd, ps, es, tp) = Journal.checkJournalAndComputeStaistics b.Journal true
-
-            let ps1 = personsActor.getPersonsStats ()
-            let es1 = elevatorsActor.getElevatorsStats ()
-            //let tp1 = personsActor.getTransportedPersons ()
-
-            assert(ps=ps1)
-            assert(es=es1)
-            //assert(tp=tp1)
+            let (sd, ps, es, tp) = Journal.checkJournalAndComputeStatistics b.Journal false
 
             {
                 SimulationResult.SimulationData = sd
