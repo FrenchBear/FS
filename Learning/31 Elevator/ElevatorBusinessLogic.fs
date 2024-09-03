@@ -59,18 +59,18 @@ type ElevatorsActor with
 
         // Actually only do something if elevator is idle
         // If elevator is busy, then at some point elevator will arrive
-        if cabin.CabinStatus = Idle then
+        if cabin.PowerStatus = Idle then
             assert (cabin.DoorStatus = Closed)
             assert (cabin.MotorStatus = Off)
-            assert (cabin.Direction = NoDirection)
+            assert (cabin.Direction = NoDir)
 
             // If we call elevator from the floor the cabin is currently waiting, then we just have to open doors
             if cabin.Floor = entry then
-                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, CabinState = Busy))
+                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, PowerState = Busy))
 
                 this.Cabins[0] <-
                     { cabin with
-                        CabinStatus = Busy
+                        PowerStatus = Busy
                         DoorStatus = Opening }
 
                 this.B.RegisterEvent (ElevatorEvent
@@ -85,11 +85,11 @@ type ElevatorsActor with
                 let oldDirection = this.Cabins[0].Direction
                 this.Cabins[0] <-
                     { cabin with
-                        CabinStatus = Busy
+                        PowerStatus = Busy
                         MotorStatus = Accelerating
                         Direction = if (entry > cabin.Floor) then Up else Down }
 
-                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, CabinState = Busy))
+                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, PowerState = Busy))
                 if this.Cabins[0].Direction<>oldDirection then
                     this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = this.Cabins[0].Direction))
                 this.B.AddJournalRecord(JournalMotorAccelerating(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = this.Cabins[0].Direction))
@@ -125,7 +125,7 @@ type ElevatorsActor with
                       CreatedOn = clk })
 
         // Cabin is not idle, on a different floor, but with no direction. If door is closing, then update its direction
-        elif cabin.Floor <> entry && cabin.Direction = NoDirection then
+        elif cabin.Floor <> entry && cabin.Direction = NoDir then
 
             // Cabin must move up or down, so we set direction and wait for the doors to close,
             // once the doors are closed, motor will turn on and start accelerating

@@ -67,7 +67,7 @@ let standardDurations =
 // Types
 
 type Direction =
-    | NoDirection
+    | NoDir
     | Up
     | Down
 
@@ -81,7 +81,7 @@ type Floor =
         match direction with
         | Up -> if sf + 1 < levels then Some(Floor(sf + 1)) else None
         | Down -> if sf > 0 then Some(Floor(sf - 1)) else None
-        | NoDirection -> None
+        | NoDir -> None
 
     static member Zero = Floor 0
 
@@ -155,7 +155,7 @@ type DoorState =
     | Opening
     | Closing
 
-type CabinState =
+type PowerState =
     | Idle
     | Busy
 
@@ -164,7 +164,7 @@ type Cabin =
       MotorStatus: MotorState
       DoorStatus: DoorState
       Direction: Direction
-      CabinStatus: CabinState
+      PowerStatus: PowerState
       _StopRequested: bool array
       IgnoreNextEndClosingDoorsEvent: bool
       Capacity: int
@@ -182,7 +182,7 @@ type Cabin =
             + System.String.Join(", ", this.Persons |> List.map (fun p -> p.ToString()))
             + "]"
 
-        $"Cabin {{ Floor = {this.Floor}, MotorStatus = {this.MotorStatus}, DoorStatus = {this.DoorStatus}, Direction = {this.Direction}, CabinStatus = {this.CabinStatus}, StopRequested = {strSR}, IgnoreNextEndClosingDoorsEvent = {this.IgnoreNextEndClosingDoorsEvent}, Capacity = {this.Capacity}, Persons = {strPersons} }}"
+        $"Cabin {{ Floor = {this.Floor}, MotorStatus = {this.MotorStatus}, DoorStatus = {this.DoorStatus}, Direction = {this.Direction}, CabinStatus = {this.PowerStatus}, StopRequested = {strSR}, IgnoreNextEndClosingDoorsEvent = {this.IgnoreNextEndClosingDoorsEvent}, Capacity = {this.Capacity}, Persons = {strPersons} }}"
 
     member this.getStopRequested floor =
         let (Floor f) = floor
@@ -308,7 +308,7 @@ type JournalRecord =
 
     | JournalCabinUselessStop of Clock: Clock * CabinIndex: int
     | JournalCabinSetDirection of Clock: Clock * CabinIndex: int * Direction: Direction
-    | JournalCabinSetState of Clock: Clock * CabinIndex: int * CabinState: CabinState
+    | JournalCabinSetState of Clock: Clock * CabinIndex: int * PowerState: PowerState
 
     | JournalCabinSetStopRequested of Clock: Clock * CabinIndex: int * Floor: Floor
     | JournalCabinClearStopRequested of Clock: Clock * CabinIndex: int * Floor: Floor

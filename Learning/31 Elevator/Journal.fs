@@ -15,8 +15,8 @@ let checkJournalAndComputeStatistics (journal: System.Collections.Generic.List<J
 
     let mutable doorState = Closed
     let mutable lastDoorUpdateStart = Clock.Zero
-    let mutable cabinDirection = NoDirection
-    let mutable cabinState = Idle
+    let mutable cabinDirection = NoDir
+    let mutable powerState = Idle
     let mutable motorState = Off
 
     let (sd: SimulationData) =
@@ -143,9 +143,9 @@ let checkJournalAndComputeStatistics (journal: System.Collections.Generic.List<J
             assert (cabinDirection <> direction)
             cabinDirection <- direction
 
-        | JournalCabinSetState(Clock = clk; CabinIndex = cabinIndex; CabinState = state) ->
-            assert (cabinState <> state)
-            cabinState <- state
+        | JournalCabinSetState(Clock = clk; CabinIndex = cabinIndex; PowerState = state) ->
+            assert (powerState <> state)
+            powerState <- state
 
         | JournalMotorOff(Clock = clk; CabinIndex = cabinIndex; Floor = floor) ->
             assert (motorState = Decelerating)
@@ -191,8 +191,8 @@ let checkJournalAndComputeStatistics (journal: System.Collections.Generic.List<J
 
     // Validate final state
     assert (doorState = DoorState.Closed)
-    assert (cabinDirection = Direction.NoDirection)
-    assert (cabinState = CabinState.Idle)
+    assert (cabinDirection = Direction.NoDir)
+    assert (powerState = PowerState.Idle)
     assert (motorState = MotorState.Off)
 
     // No need to check persons array, if these arrays are all trus, all required data is present
@@ -361,7 +361,7 @@ let checkJournalAndComputeStatistics (journal: System.Collections.Generic.List<J
 
         | JournalMotorDecelerating(Clock = clk; CabinIndex = cabinIndex; Floor = floor) -> ()
 
-        | JournalCabinSetState(Clock = clk; CabinIndex = cabinIndex; CabinState = state) ->
+        | JournalCabinSetState(Clock = clk; CabinIndex = cabinIndex; PowerState = state) ->
             if state = Idle then
                 assert (clk = Clock.Zero || acc.IsCabinBusy)
 
