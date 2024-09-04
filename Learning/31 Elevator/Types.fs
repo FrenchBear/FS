@@ -18,7 +18,7 @@ type LogDetails =
       ShowEvents: bool
       ShowInitialPersons: bool
       ShowDetailedPersonsStats: bool
-      ShowDetailedElevatorStatRecords: bool }
+      ShowJournal: bool }
 
 type Durations =
     { AccelerationDuration: int // and deceleration duration
@@ -33,7 +33,7 @@ let standardLogDetails =
       ShowEvents = false
       ShowInitialPersons = false
       ShowDetailedPersonsStats = false
-      ShowDetailedElevatorStatRecords = false }
+      ShowJournal = false }
 
 let standardDurations =
     { AccelerationDuration = 2
@@ -199,7 +199,7 @@ type Cabin =
             + System.String.Join(", ", this.Persons |> List.map (fun p -> p.ToString()))
             + "]"
 
-        $"Cabin {{ Floor = {this.Floor}, MotorStatus = {this.MotorStatus}, DoorStatus = {this.DoorStatus}, Direction = {this.Direction}, CabinStatus = {this.PowerStatus}, StopRequested = {strSR}, IgnoreNextEndClosingDoorsEvent = {this.IgnoreNextEndClosingDoorsEvent}, Capacity = {this.Capacity}, Persons = {strPersons} }}"
+        $"Cabin {{ Floor = {this.Floor}, MotorStatus = {this.MotorStatus}, DoorStatus = {this.DoorStatus}, Direction = {this.Direction}, PowerStatus = {this.PowerStatus}, StopRequested = {strSR}, IgnoreNextEndClosingDoorsEvent = {this.IgnoreNextEndClosingDoorsEvent}, Capacity = {this.Capacity}, Persons = {strPersons} }}"
 
     member this.getStopRequested floor =
         let (Floor f) = floor
@@ -222,7 +222,12 @@ type Cabin =
 
 
 // ----------------------------------------
-// Simulation parameters
+// Simulation data
+
+type SimulationDescription =
+    { Title: string
+      Description: string
+    }
 
 type RandomPersonsAlgorithm =
     | Ground50Levels50
@@ -252,6 +257,10 @@ type SimulationPersons =
 
 type SimulationData =
     {
+      // Description
+      Title: string
+      Description: string
+
       // Elevators/Building
       Levels: int
       NumberOfCabins: int
@@ -330,8 +339,8 @@ type JournalRecord =
     | JournalCabinSetStopRequested of Clock: Clock * CabinIndex: int * Floor: Floor
     | JournalCabinClearStopRequested of Clock: Clock * CabinIndex: int * Floor: Floor
 
-    | JournalLandingSetCall of Clock: Clock * CabinIndex: int * Floor: Floor * Direction: Direction
-    | JournalLandingClearCall of Clock: Clock * CabinIndex: int * Floor: Floor * Direction: Direction
+    | JournalLandingSetCall of Clock: Clock * Floor: Floor * Direction: Direction
+    | JournalLandingClearCall of Clock: Clock * Floor: Floor * Direction: Direction
 
     | JournalPersonArrival of Clock: Clock * Id: PersonId * EntryFloor: Floor * ExitFloor: Floor
 
@@ -461,7 +470,8 @@ type ClockPriority =
             | _ -> -1
 
 type DataBag =
-    { SimulationElevators: SimulationElevators
+    { SimulationDescription: SimulationDescription
+      SimulationElevators: SimulationElevators
       SimulationPersons: SimulationPersons
       LogDetails: LogDetails
       Durations: Durations

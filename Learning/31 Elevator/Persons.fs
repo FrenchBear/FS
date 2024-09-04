@@ -78,7 +78,7 @@ type PersonsActor with
         if this.B.LogDetails.ShowEvents then
             //let evtStr = sprintf "%0A" evt
             let evtStr = evt.ToString()
-            Logging.logMessage this.B evt.Clock $"Person evt: {evtStr}"
+            Logging.logMessage this.B evt.Clock $"Person evt: {evtStr}" System.ConsoleColor.Blue
 
         assert (clk = evt.Clock)
 
@@ -101,14 +101,14 @@ type PersonsActor with
 
             if originalLanding.CallUp<>updatedLanding.CallUp then
                 if updatedLanding.CallUp then
-                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = evt.Person.EntryFloor, Direction = Up))
+                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, Floor = evt.Person.EntryFloor, Direction = Up))
                 else
-                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = evt.Person.EntryFloor, Direction = Up))
+                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, Floor = evt.Person.EntryFloor, Direction = Up))
             if originalLanding.CallDown<>updatedLanding.CallDown then
                 if updatedLanding.CallDown then
-                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = evt.Person.EntryFloor, Direction = Down))
+                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, Floor = evt.Person.EntryFloor, Direction = Down))
                 else
-                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = evt.Person.EntryFloor, Direction = Down))
+                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, Floor = evt.Person.EntryFloor, Direction = Down))
 
         | EndEnterCabin ->
             this.B.AddJournalRecord(JournalPersonCabinEnterEnd(Clock = clk, CabinIndex = 0, Id = evt.Person.Id))

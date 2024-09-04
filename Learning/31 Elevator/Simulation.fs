@@ -24,7 +24,10 @@ let runSimulation (b: DataBag) =
     personsActor.initialize ()
 
     let sd =
-        { Levels = b.SimulationElevators.Levels
+        { 
+          Title = b.SimulationDescription.Title
+          Description = b.SimulationDescription.Description
+          Levels = b.SimulationElevators.Levels
           NumberOfCabins = 1
           Capacity = b.SimulationElevators.Capacity
           FixedPersonsList =
@@ -73,7 +76,7 @@ let runSimulation (b: DataBag) =
             if b.LogDetails.ShowLog then
                 printfn "\nEnd simulation clk: %d\n" iClk
 
-            let (sd, ps, es, tp) = Journal.checkJournalAndComputeStatistics b.Journal false
+            let (sd, ps, es, tp) = Journal.checkJournalAndComputeStatistics b.Journal b.LogDetails.ShowJournal
 
             {
                 SimulationResult.SimulationData = sd
@@ -101,6 +104,10 @@ let runSimulation (b: DataBag) =
 
 let PrintSimulationData (sd: SimulationData) =
     printfn "\nSimulation data"
+    printfn "  Description"
+    printfn "    Title:       %s" sd.Title
+    printfn "    Description: %s" sd.Description
+
     printfn "  Persons"
 
     if sd.FixedPersonsList then

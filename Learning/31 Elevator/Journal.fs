@@ -9,6 +9,19 @@ module Journal
 
 open System.Linq
 
+let printJournalRecord record =
+    let srec = sprintf "%0A" record
+    let p = srec.IndexOf('(')
+    System.Console.ForegroundColor <- System.ConsoleColor.Yellow
+    printfn $"{srec[.. (p - 1)], -35} {srec[p..]}"
+    System.Console.ForegroundColor <- System.ConsoleColor.White
+
+// Not used; debugging helper
+let printJournal journal =
+    printfn "\nJournal"
+    for record in journal do
+        printJournalRecord record
+
 let checkJournalAndComputeStatistics (journal: System.Collections.Generic.List<JournalRecord>) showJournal =
     if showJournal then
         printfn "\nValidating journal"
@@ -42,9 +55,7 @@ let checkJournalAndComputeStatistics (journal: System.Collections.Generic.List<J
         recCount <- recCount + 1
 
         if showJournal then
-            let srec = sprintf "%0A" record
-            let p = srec.IndexOf('(')
-            printfn $"{srec[.. (p - 1)], -35} {srec[p..]}"
+            printJournalRecord record
 
         match record with
         | JournalSimulationData(Clock = clk; SD = sd) -> assert (recCount = 1)
@@ -163,7 +174,7 @@ let checkJournalAndComputeStatistics (journal: System.Collections.Generic.List<J
             assert (motorState = FullSpeed)
             motorState <- Decelerating
 
-        | JournalLandingSetCall(Clock = clk; CabinIndex = cabinIndex; Floor = (Floor iFloor); Direction = direction) ->
+        | JournalLandingSetCall(Clock = clk; Floor = (Floor iFloor); Direction = direction) ->
             if direction = Up then
                 assert(not landingsCallUp[iFloor])
                 landingsCallUp[iFloor] <- true
@@ -171,7 +182,7 @@ let checkJournalAndComputeStatistics (journal: System.Collections.Generic.List<J
                 assert(not landingsCallDown[iFloor])
                 landingsCallDown[iFloor] <- true
 
-        | JournalLandingClearCall(Clock = clk; CabinIndex = cabinIndex; Floor = (Floor iFloor); Direction = direction) ->
+        | JournalLandingClearCall(Clock = clk; Floor = (Floor iFloor); Direction = direction) ->
             if direction = Up then
                 assert(landingsCallUp[iFloor])
                 landingsCallUp[iFloor] <- false

@@ -17,9 +17,10 @@ let testSimple1 () =
 
     // Create DataBag
     let b =
-        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+        { SimulationDescription = { Title = "Simple #1"; Description = "Juste une personne à transporter" }
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray persone
-          LogDetails = { standardLogDetails with ShowLog = true }
+          LogDetails = { standardLogDetails with ShowLog = true; ShowEvents = true }
           //LogDetails = { 
           //    ShowLog = true
           //    ShowEvents = false
@@ -41,6 +42,41 @@ let testSimple1 () =
     Simulation.printSimulationStats res.SimulationStats
 
 
+let testSimple2 () =
+    printfn "\n---------------------------------------\nTest Simple #2\n"
+
+    let persone = [|
+        { Id = PersonId 1; EntryFloor = Floor 1; ExitFloor = Floor 4; ArrivalClock = Clock 4; EntryClock = None; ExitClock = None }
+        { Id = PersonId 2; EntryFloor = Floor 1; ExitFloor = Floor 0; ArrivalClock = Clock 42; EntryClock = None; ExitClock = None }
+        { Id = PersonId 3; EntryFloor = Floor 5; ExitFloor = Floor 0; ArrivalClock = Clock 47; EntryClock = None; ExitClock = None }
+    |]
+
+    // Create DataBag
+    let b =
+        { SimulationDescription = { Title = "Simple #2"; Description = "Trois personnes en trois voyages" }
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+          SimulationPersons = SimulationPersonsArray persone
+          LogDetails = { standardLogDetails with ShowLog = true; ShowEvents = true; ShowJournal = true }
+          //LogDetails = { 
+          //    ShowLog = true
+          //    ShowEvents = false
+          //    ShowInitialPersons = false
+          //    ShowDetailedPersonsStats = false
+          //    ShowDetailedElevatorStatRecords = false }
+          Durations = standardDurations
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
+        }
+
+    let res = runSimulation b
+
+    Simulation.PrintSimulationData(res.SimulationData);
+    PersonsActor.PrintTransportedPersons(res.TransportedPersons);
+    PersonsActor.printPersonStats res.PersonsStats
+    ElevatorsActor.printElevatorStats res.ElevatorsStats
+    Simulation.printSimulationStats res.SimulationStats
+
 
 let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
     printfn "\n---------------------------------------\nTest 10 persons arriving together with cabin capacity 6\n"
@@ -60,7 +96,8 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
 
     // Create DataBag
     let b =
-        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+        { SimulationDescription = { Title = "Personnes=10, Capacité=6"; Description = "Test 10 persons arriving together with cabin capacity 6" }
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray tenPersonsArrivingAtTimeZero
           LogDetails = { standardLogDetails with ShowLog = true }
           Durations = standardDurations
@@ -94,7 +131,39 @@ let testPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     |]
 
     let b =
-        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+        { SimulationDescription = { Title = "Arrivée quand les portes vont se fermer"; Description = "Person arriving just when cabin doors are about to close" }
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+          SimulationPersons = SimulationPersonsArray personsData 
+          LogDetails = { standardLogDetails with ShowLog = true }
+          Durations = standardDurations
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
+        }
+
+    let res = runSimulation b
+
+    assert (res.ElevatorsStats.LevelsCovered[2] = 3) // Make sure that the two persons traveled together on 3 levels
+
+    Simulation.PrintSimulationData(res.SimulationData);
+    PersonsActor.PrintTransportedPersons(res.TransportedPersons);
+    PersonsActor.printPersonStats res.PersonsStats
+    ElevatorsActor.printElevatorStats res.ElevatorsStats
+    Simulation.printSimulationStats res.SimulationStats
+
+
+let TestPersonArrivingJustWhenCabinDoorsHaveFinishedClosing () =
+    printfn "\n---------------------------------------\nTest Person arriving just when cabin have finished closing\n"
+
+    // Person 2 arrives just when the door have closed, door should reopen and let the person move in
+    let personsData = [|
+        { Id = PersonId 1; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock.Zero; EntryClock = None; ExitClock = None }
+        { Id = PersonId 2; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock 6; EntryClock = None; ExitClock = None }
+    |]
+
+    let b =
+        { SimulationDescription = { Title = "Arrivée quand les portes se sont fermées"; Description = "Person arriving just when cabin have finished closing" }
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
           LogDetails = { standardLogDetails with ShowLog = true }
           Durations = standardDurations
@@ -126,7 +195,8 @@ let testDoorsClosingWhenAPersonArrives () =
     |]
 
     let b =
-        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+        { SimulationDescription = { Title = "Arrivée quand les portes se ferment"; Description = "Doors closing when a person arrives" }
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
           LogDetails = { standardLogDetails with ShowLog = true }
           Durations = { 
@@ -168,7 +238,8 @@ let testPersonsGoingUpAndDownFromSameFloor () =
     |]
 
     let b =
-        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+        { SimulationDescription = { Title = "Personnes montant et descendant du même palier"; Description = "Persons going up and down from same floor" }
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationPersonsArray personsData 
           LogDetails = { standardLogDetails with ShowLog = true }
           //LogDetails = { 
@@ -214,7 +285,8 @@ let testARandomSimulation () =
     printfn "\n---------------------------------------\nTest a random simulation\n"
 
     let b =
-        { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+        { SimulationDescription = { Title = "Simulation aléatoire"; Description = "A random large simulation" }
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
           SimulationPersons = SimulationRandomGeneration(1000, 36000, 1, FullRandom) 
           LogDetails = { standardLogDetails with ShowDetailedPersonsStats = false }
           //LogDetails = { 
@@ -241,11 +313,11 @@ let testARandomSimulation () =
 let testContinuousSimulation () =
     printfn "\n---------------------------------------\nTest continuous simulation\n"
 
-
     printfn "\nContinuous random simulation of variable number of persons over 800s"
     for np in 0..5..130 do
         let b =
-            { SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
+            { SimulationDescription = { Title = $"Simulation continue à {np} personnes"; Description = "Continuous simulation" }
+              SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
               SimulationPersons = SimulationRandomGeneration(np, 800, 1, Ground50Levels50)
               LogDetails = standardLogDetails
               Durations = standardDurations
@@ -265,11 +337,13 @@ System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
 //testSimple1 ()
+testSimple2 ()
 //testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 //testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+//TestPersonArrivingJustWhenCabinDoorsHaveFinishedClosing ()
 //testDoorsClosingWhenAPersonArrives ()
 //testPersonsGoingUpAndDownFromSameFloor ()
-testARandomSimulation ()
+//testARandomSimulation ()
 //testContinuousSimulation ()
 
 printfn "\nDone."

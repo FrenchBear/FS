@@ -7,10 +7,12 @@
 [<AutoOpen>]
 module Logging
 
-let logMessage b clk msg =
+let logMessage b clk msg col =
     if b.LogDetails.ShowLog then
         let (Clock iClk) = clk
+        System.Console.ForegroundColor <- col
         printfn $"clk: {iClk, 4}  {msg}"
+        System.Console.ForegroundColor <- System.ConsoleColor.White
 
 let logCabinUpdate b clk before after =
     let lst = new System.Collections.Generic.List<string>()
@@ -66,7 +68,7 @@ let logCabinUpdate b clk before after =
         lst.Add(System.String.Join(", ", lstPersons))
 
     if not (lst.Count = 0) then
-        logMessage b clk ("Cabin:   " + System.String.Join(", ", lst))
+        logMessage b clk ("Cabin:   " + System.String.Join(", ", lst)) System.ConsoleColor.White
 
 
 let logLandingUpdate b clk floor before after =
@@ -101,14 +103,14 @@ let logLandingUpdate b clk floor before after =
 
     if not (lst.Count = 0) then
         let (Floor iFloor) = floor
-        logMessage b clk ($"Landing: Landing {iFloor} " + System.String.Join(", ", lst))
+        logMessage b clk ($"Landing: Landing {iFloor} " + System.String.Join(", ", lst)) System.ConsoleColor.White
 
 
 let logPersonArrival b clk p =
     let (PersonId person) = p.Id
     let (Floor entry) = p.EntryFloor
     let (Floor exit) = p.ExitFloor
-    logMessage b clk $"Person:  Person {person} Arrival Floor {entry}→Floor {exit}"
+    logMessage b clk $"Person:  Person {person} Arrival Floor {entry}→Floor {exit}" System.ConsoleColor.White
 
 let logPersonExit b clk p =
     let (PersonId pid) = p.Id
@@ -122,4 +124,5 @@ let logPersonExit b clk p =
 
     logMessage b clk
         $"Person:  Person {pid} Exit, Arrival Floor {entry}@{arrivalIClk}, Waited {waitingCabin}, Entered@{entryIClk}, Exit Floor {exit}@{exitIClk}, Total {totalTransportationTime}"
+        System.ConsoleColor.White
 

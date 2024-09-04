@@ -50,7 +50,7 @@ type ElevatorsActor with
             let evtStr = evt.ToString()
             //let cabStr = sprintf "%0A" this.Cabins[0]
             let cabStr = this.Cabins[0].ToString()
-            logMessage this.B evt.Clock $"Elevator evt: {evtStr}, Cabins[0]: {cabStr}"
+            logMessage this.B evt.Clock $"Elevator evt: {evtStr}, Cabins[0]: {cabStr}" System.ConsoleColor.Green
 
         // Keep a deep copy for final logging
         let originalCabin = this.Cabins[0].deepCopy ()
@@ -558,13 +558,12 @@ type ElevatorsActor with
             if originalLanding.CallUp <> updatedLanding.CallUp then
                 if updatedLanding.CallUp then
                     this.B.AddJournalRecord(
-                        JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up)
+                        JournalLandingSetCall(Clock = clk, Floor = this.Cabins[0].Floor, Direction = Up)
                     )
                 else
                     this.B.AddJournalRecord(
                         JournalLandingClearCall(
                             Clock = clk,
-                            CabinIndex = 0,
                             Floor = this.Cabins[0].Floor,
                             Direction = Up
                         )
@@ -575,7 +574,6 @@ type ElevatorsActor with
                     this.B.AddJournalRecord(
                         JournalLandingSetCall(
                             Clock = clk,
-                            CabinIndex = 0,
                             Floor = this.Cabins[0].Floor,
                             Direction = Down
                         )
@@ -584,7 +582,6 @@ type ElevatorsActor with
                     this.B.AddJournalRecord(
                         JournalLandingClearCall(
                             Clock = clk,
-                            CabinIndex = 0,
                             Floor = this.Cabins[0].Floor,
                             Direction = Down
                         )
