@@ -13,7 +13,7 @@ type ElevatorsActor with
         let cabinInitialState =
             { Floor = Floor.Zero
               MotorStatus = Off
-              Direction = NoDir
+              Direction = NoDirection
               DoorStatus = Closed
               PowerStatus = Idle
               _StopRequested = Array.create b.SimulationElevators.Levels false
@@ -38,7 +38,7 @@ type ElevatorsActor with
         let cabin = this.Cabins[0]
         assert (this.Cabins[0].MotorStatus = Off)
         assert (this.Cabins[0].DoorStatus = Closed)
-        assert (this.Cabins[0].Direction = NoDir)
+        assert (this.Cabins[0].Direction = NoDirection)
         assert (this.Cabins[0].PowerStatus = Idle)
         assert (this.Cabins[0].Floor = Floor.Zero)
 
@@ -62,7 +62,7 @@ type ElevatorsActor with
         | EndAcceleration ->
             assert (this.Cabins[0].MotorStatus = Accelerating)
             assert (this.Cabins[0].DoorStatus = Closed)
-            assert (this.Cabins[0].Direction <> NoDir)
+            assert (this.Cabins[0].Direction <> NoDirection)
             assert (this.Cabins[0].PowerStatus = Busy)
 
             this.B.RegisterEvent(
@@ -73,13 +73,16 @@ type ElevatorsActor with
                       CreatedOn = clk }
             )
 
-            this.Cabins[0] <- { this.Cabins[0] with MotorStatus = FullSpeed } 
+            this.Cabins[0] <-
+                { this.Cabins[0] with
+                    MotorStatus = FullSpeed }
+
             this.B.AddJournalRecord(JournalMotorFullSpeed(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
         | Decision ->
             assert (this.Cabins[0].MotorStatus = FullSpeed)
             assert (this.Cabins[0].DoorStatus = Closed)
-            assert (this.Cabins[0].Direction <> NoDir)
+            assert (this.Cabins[0].Direction <> NoDirection)
             assert (this.Cabins[0].PowerStatus = Busy)
 
             // Update Position
@@ -94,7 +97,7 @@ type ElevatorsActor with
         | EndMovingFullSpeed ->
             assert (this.Cabins[0].MotorStatus = FullSpeed)
             assert (this.Cabins[0].DoorStatus = Closed)
-            assert (this.Cabins[0].Direction <> NoDir)
+            assert (this.Cabins[0].Direction <> NoDirection)
             assert (this.Cabins[0].PowerStatus = Busy)
 
             this.B.RegisterEvent(
@@ -114,7 +117,7 @@ type ElevatorsActor with
         | EndDeceleration ->
             assert (this.Cabins[0].MotorStatus = Decelerating)
             assert (this.Cabins[0].DoorStatus = Closed)
-            assert (this.Cabins[0].Direction <> NoDir)
+            assert (this.Cabins[0].Direction <> NoDirection)
             assert (this.Cabins[0].PowerStatus = Busy)
 
             this.B.AddJournalRecord(JournalMotorOff(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
@@ -131,47 +134,58 @@ type ElevatorsActor with
             // Clear the stop requested for current floor
             if this.Cabins[0].getStopRequested this.Cabins[0].Floor then
                 this.Cabins[0].clearStopRequested this.Cabins[0].Floor
-                this.B.AddJournalRecord(JournalCabinClearStopRequested(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
-            // Decide if we still continue with the same direction (returns true) or not (returns false)
-            let rec checkRequestsOneDirection (floor: Floor) direction =
-                let nf = floor.nextFloor this.levels direction
+                this.B.AddJournalRecord(
+                    JournalCabinClearStopRequested(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor)
+                )
 
-                match nf with
-                | None -> false
-                | Some fl ->
-                    let (Floor iFloor) = fl
 
-                    if this.Cabins[0].getStopRequested fl then
-                        true
-                    elif not (List.isEmpty (this.Landings[iFloor].Persons)) then
-                        true
-                    else
-                        checkRequestsOneDirection fl direction
-
-            let checkRequests (floor: Floor) direction =
-                assert (direction <> NoDir)
-
-                if checkRequestsOneDirection floor direction then
-                    direction
-                else
-                    let oppositeDirection = if direction = Up then Down else Up
-
-                    if checkRequestsOneDirection floor oppositeDirection then
-                        oppositeDirection
-                    else
-                        NoDir
+            // When motor goes off, cabin direction is updated based only on persons in the cabin
+            // - If cabin is empty, or everyone will mouve out at current floor, then set to NoDirection
+            // - If there's at leat a person in the cagin going in current cabin direction, keep it, or reverse it
 
             let oldDirection = this.Cabins[0].Direction
-            let newDirection = checkRequests this.Cabins[0].Floor this.Cabins[0].Direction
+
+            let newDirection =
+                // If cabin is empty, then set cabin direction to NoDirection
+                if List.length this.Cabins[0].Persons = 0 then
+                    NoDirection
+                // If all persons in the cabin exit at current floor, then set cabin direction to NoDirection
+                elif not (List.exists (fun p -> p.ExitFloor <> this.Cabins[0].Floor) this.Cabins[0].Persons) then
+                    NoDirection
+                else if
+
+                    // If cabin is going down, but nobody remaining in cabin go down, then we're going up
+                    oldDirection = Down
+                then
+                    if
+                        not (List.exists (fun (p: Person) -> p.ExitFloor < this.Cabins[0].Floor) this.Cabins[0].Persons)
+                    then
+                        Up
+                    else
+                        oldDirection
+
+                // If cabin is going up, but nobody remaining in cabin go up, then we're going down
+                elif oldDirection = Up then
+                    if
+                        not (List.exists (fun (p: Person) -> p.ExitFloor > this.Cabins[0].Floor) this.Cabins[0].Persons)
+                    then
+                        Down
+                    else
+                        oldDirection
+
+                else
+                    oldDirection
+
 
             this.Cabins[0] <-
                 { this.Cabins[0] with
                     Direction = newDirection
                     MotorStatus = Off }
 
-            if newDirection<>oldDirection then
+            if newDirection <> oldDirection then
                 this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = newDirection))
+
 
         | EndMotorDelay ->
             assert (this.Cabins[0].MotorStatus = Off)
@@ -182,7 +196,9 @@ type ElevatorsActor with
                 { this.Cabins[0] with
                     DoorStatus = Opening }
 
-            this.B.AddJournalRecord(JournalCabinDoorsOpenBegin(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
+            this.B.AddJournalRecord(
+                JournalCabinDoorsOpenBegin(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor)
+            )
 
             this.B.RegisterEvent(
                 ElevatorEvent
@@ -250,7 +266,7 @@ type ElevatorsActor with
                         | p :: remainingPersons ->
 
                             let personGoesInSameDirectionAsCabin =
-                                if this.Cabins[0].Direction = NoDir then
+                                if this.Cabins[0].Direction = NoDirection then
                                     true // If cabin has no direction, then let 1st person enter, it will decide on cabin direction
                                 else
                                     (this.Cabins[0].Direction = Up && p.ExitFloor > this.Cabins[0].Floor)
@@ -258,20 +274,28 @@ type ElevatorsActor with
 
                             if (personGoesInSameDirectionAsCabin) then
                                 let updatedPerson = { p with EntryClock = Some clk }
-                                this.B.AddJournalRecord(JournalPersonCabinEnterBegin(Clock = clk, CabinIndex = 0, Id = p.Id))
+
+                                this.B.AddJournalRecord(
+                                    JournalPersonCabinEnterBegin(Clock = clk, CabinIndex = 0, Id = p.Id)
+                                )
 
                                 if not (this.Cabins[0].getStopRequested p.ExitFloor) then
                                     this.Cabins[0].setStopRequested p.ExitFloor
-                                    this.B.AddJournalRecord(JournalCabinSetStopRequested(Clock = clk, CabinIndex = 0, Floor = p.ExitFloor))
+
+                                    this.B.AddJournalRecord(
+                                        JournalCabinSetStopRequested(Clock = clk, CabinIndex = 0, Floor = p.ExitFloor)
+                                    )
 
                                 let newDirection =
-                                    if this.Cabins[0].Direction = NoDir then
+                                    if this.Cabins[0].Direction = NoDirection then
                                         if p.ExitFloor > this.Cabins[0].Floor then Up else Down
                                     else
                                         this.Cabins[0].Direction
 
-                                if this.Cabins[0].Direction<>newDirection then
-                                    this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction=newDirection))
+                                if this.Cabins[0].Direction <> newDirection then
+                                    this.B.AddJournalRecord(
+                                        JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = newDirection)
+                                    )
 
                                 // Add person to cabin
                                 this.Cabins[0] <-
@@ -351,9 +375,13 @@ type ElevatorsActor with
             assert (this.Cabins[0].PowerStatus = Busy)
 
             if this.Cabins[0].DoorStatus = Opening then
-                this.B.AddJournalRecord(JournalCabinDoorsOpenEnd(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
+                this.B.AddJournalRecord(
+                    JournalCabinDoorsOpenEnd(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor)
+                )
 
-            this.Cabins[0] <- { this.Cabins[0] with DoorStatus = Open }
+            this.Cabins[0] <-
+                { this.Cabins[0] with
+                    DoorStatus = Open }
 
             if not (allowMoveOut ()) then
                 if not (allowMoveIn ()) then
@@ -370,7 +398,9 @@ type ElevatorsActor with
                               CreatedOn = clk }
                     )
 
-                    this.B.AddJournalRecord(JournalCabinDoorsCloseBegin(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
+                    this.B.AddJournalRecord(
+                        JournalCabinDoorsCloseBegin(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor)
+                    )
 
 
         | EndClosingDoors when this.Cabins[0].IgnoreNextEndClosingDoorsEvent ->
@@ -386,23 +416,100 @@ type ElevatorsActor with
             this.Cabins[0] <-
                 { this.Cabins[0] with
                     DoorStatus = Closed }
-            this.B.AddJournalRecord(JournalCabinDoorsCloseEnd(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
+
+            this.B.AddJournalRecord(
+                JournalCabinDoorsCloseEnd(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor)
+            )
 
             match this.Cabins[0].Direction with
-            | NoDir ->
-                for l in 0 .. this.levels - 1 do
-                    assert (not (this.Cabins[0].getStopRequested (Floor l)))
-                    assert (this.Landings[l].Persons.IsEmpty)
+            | NoDirection ->
+                // Special case, person arriving at current level exactly when doors close -> it has priority
+                // We should check if there's someone waiting on another landing
+                // In case of multiple waiting, le't chose the one that arrived first
 
-                assert (this.Cabins[0].Persons.IsEmpty)
+                // Let's handle the special case
+                let (Floor iFloor) = this.Cabins[0].Floor
 
-                // Ok, we checked to be sure that nobody is waiting, elevator goes into idle state
-                this.Cabins[0] <-
-                    { this.Cabins[0] with
-                        PowerStatus = Idle }
-                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, PowerState = Idle))
+                if List.length this.Landings[iFloor].Persons > 0 then
+                    assert (List.forall (fun p -> p.ArrivalClock = clk) this.Landings[iFloor].Persons)
+
+                    // We consider reopening only if cabin is not full
+                    if List.length this.Cabins[0].Persons < this.Cabins[0].Capacity then
+
+                        // We reopen only if at least 1 person goes in the same direction as cabin
+                        if
+                            this.Cabins[0].Direction = NoDirection
+                            || (this.Landings[iFloor].Persons
+                                |> List.exists (fun p -> this.Cabins[0].Direction = p.goDirection this.Cabins[0].Floor))
+                        then
+
+                            // Ok, re-open the door for the lucky guy(s)
+                            this.B.RegisterEvent(
+                                ElevatorEvent
+                                    { Clock = clk.addOffset (this.B.Durations.OpeningDoorsDuration)
+                                      CabinIndex = 0
+                                      Event = ElevatorEventDetail.EndClosingDoors
+                                      CreatedOn = clk }
+                            )
+
+                            this.Cabins[0] <-
+                                { this.Cabins[0] with
+                                    DoorStatus = Opening }
+
+                            this.B.AddJournalRecord(
+                                JournalCabinDoorsOpenBegin(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor)
+                            )
+                else
+
+                    // We build a list of persons waitin on other landings, so we car sort it by arrival time
+                    let rec getWaitingList iFloor listSoFar =
+                        if iFloor = this.B.SimulationElevators.Levels then
+                            listSoFar
+                        else
+                            getWaitingList (iFloor + 1) (listSoFar @ this.Landings[iFloor].Persons)
+
+                    let waitingForElevator = getWaitingList 0 []
+
+                    // If noone is waiting, we switch to idle state
+                    if List.length waitingForElevator = 0 then
+                        this.Cabins[0] <-
+                            { this.Cabins[0] with
+                                PowerStatus = Idle }
+
+                        this.B.AddJournalRecord(
+                            JournalCabinSetPower(Clock = clk, CabinIndex = 0, PowerState = PowerState.Idle)
+                        )
+
+                    else
+                        // Winner is the one arrived first (with lower Id if multiple arrived at same time)
+                        let winner =
+                            waitingForElevator |> List.sortBy (fun p -> p.ArrivalClock) |> List.head
+
+                        let newDir =
+                            if winner.EntryFloor > this.Cabins[0].Floor then
+                                Up
+                            else
+                                Down
+
+                        this.Cabins[0] <-
+                            { this.Cabins[0] with
+                                Direction = newDir }
+
+                        this.B.AddJournalRecord(
+                            JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = newDir)
+                        )
+
+                        // Wait a bit to start acceleration
+                        this.B.RegisterEvent(
+                            ElevatorEvent
+                                { Clock = clk.addOffset (this.B.Durations.MotorDelayDuration)
+                                  CabinIndex = 0
+                                  Event = ElevatorEventDetail.StartAcceleration
+                                  CreatedOn = clk }
+                        )
 
             | _ ->
+                // Wait a bit before starting acceleration
                 this.B.RegisterEvent(
                     ElevatorEvent
                         { ElevatorEvent.Clock = clk.addOffset this.B.Durations.MotorDelayDuration
@@ -420,7 +527,15 @@ type ElevatorsActor with
             this.Cabins[0] <-
                 { this.Cabins[0] with // Beware, cabin has already been updated...
                     MotorStatus = Accelerating }
-            this.B.AddJournalRecord(JournalMotorAccelerating(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = this.Cabins[0].Direction))
+
+            this.B.AddJournalRecord(
+                JournalMotorAccelerating(
+                    Clock = clk,
+                    CabinIndex = 0,
+                    Floor = this.Cabins[0].Floor,
+                    Direction = this.Cabins[0].Direction
+                )
+            )
 
             this.B.RegisterEvent(
                 ElevatorEvent
@@ -439,17 +554,41 @@ type ElevatorsActor with
 
         // Decision event is special, changes floor, and breaks originalLanging/updatedLanding comparison
         // Anyway, Devision event doesn't update Landing
-        if evt.Event<>Decision then
-            if originalLanding.CallUp<>updatedLanding.CallUp then
+        if evt.Event <> Decision then
+            if originalLanding.CallUp <> updatedLanding.CallUp then
                 if updatedLanding.CallUp then
-                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up))
+                    this.B.AddJournalRecord(
+                        JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up)
+                    )
                 else
-                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Up))
-            if originalLanding.CallDown<>updatedLanding.CallDown then
+                    this.B.AddJournalRecord(
+                        JournalLandingClearCall(
+                            Clock = clk,
+                            CabinIndex = 0,
+                            Floor = this.Cabins[0].Floor,
+                            Direction = Up
+                        )
+                    )
+
+            if originalLanding.CallDown <> updatedLanding.CallDown then
                 if updatedLanding.CallDown then
-                    this.B.AddJournalRecord(JournalLandingSetCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
+                    this.B.AddJournalRecord(
+                        JournalLandingSetCall(
+                            Clock = clk,
+                            CabinIndex = 0,
+                            Floor = this.Cabins[0].Floor,
+                            Direction = Down
+                        )
+                    )
                 else
-                    this.B.AddJournalRecord(JournalLandingClearCall(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = Down))
+                    this.B.AddJournalRecord(
+                        JournalLandingClearCall(
+                            Clock = clk,
+                            CabinIndex = 0,
+                            Floor = this.Cabins[0].Floor,
+                            Direction = Down
+                        )
+                    )
 
     static member printElevatorStats(es: ElevatorsStats) =
         printfn "\nElevator stats"

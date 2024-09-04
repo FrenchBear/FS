@@ -67,9 +67,15 @@ let standardDurations =
 // Types
 
 type Direction =
-    | NoDir
+    | NoDirection
     | Up
     | Down
+
+    member this.AsString () =
+        match this with
+        | NoDirection -> "NoDir"
+        | Up -> "Up"
+        | Down -> "Down"
 
 // Use typed Floor rather than int alias for better type checking
 type Floor =
@@ -81,10 +87,9 @@ type Floor =
         match direction with
         | Up -> if sf + 1 < levels then Some(Floor(sf + 1)) else None
         | Down -> if sf > 0 then Some(Floor(sf - 1)) else None
-        | NoDir -> None
+        | NoDirection -> None
 
     static member Zero = Floor 0
-
 
 // Use typed Clock rather than int alias for better type checking
 type Clock =
@@ -124,6 +129,11 @@ type Person =
     member this.waitForElevatorTime() = this.timeSinceArrival this.EntryClock
     member this.totalTransportTime() = this.timeSinceArrival this.ExitClock
 
+    member this.goDirection floor =
+        if floor < this.ExitFloor then Up
+        else if floor > this.ExitFloor then Down
+        else NoDirection
+
     // For C# comparisons
     override this.ToString() =
         let (PersonId iId) = this.Id
@@ -149,6 +159,13 @@ type MotorState =
     | Accelerating
     | Decelerating
 
+    member this.AsString () =
+        match this with
+        | Off -> "Off"
+        | Accelerating -> "Acc"
+        | FullSpeed -> "FS"
+        | Decelerating -> "Dec"
+        
 type DoorState =
     | Open
     | Closed
@@ -308,7 +325,7 @@ type JournalRecord =
 
     | JournalCabinUselessStop of Clock: Clock * CabinIndex: int
     | JournalCabinSetDirection of Clock: Clock * CabinIndex: int * Direction: Direction
-    | JournalCabinSetState of Clock: Clock * CabinIndex: int * PowerState: PowerState
+    | JournalCabinSetPower of Clock: Clock * CabinIndex: int * PowerState: PowerState
 
     | JournalCabinSetStopRequested of Clock: Clock * CabinIndex: int * Floor: Floor
     | JournalCabinClearStopRequested of Clock: Clock * CabinIndex: int * Floor: Floor
@@ -444,23 +461,22 @@ type ClockPriority =
             | _ -> -1
 
 type DataBag =
-    { 
-      SimulationElevators: SimulationElevators
+    { SimulationElevators: SimulationElevators
       SimulationPersons: SimulationPersons
       LogDetails: LogDetails
-      Durations: Durations 
+      Durations: Durations
 
       EventsQueue: System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>
-      Journal: System.Collections.Generic.List<JournalRecord>
-    }
+      Journal: System.Collections.Generic.List<JournalRecord> }
 
     member this.RegisterEvent evt =
         match evt with
-        | ElevatorEvent ee -> this.EventsQueue.Enqueue(evt, { Clock = ee.Clock; Priority = 1 })
-        | PersonEvent pe -> this.EventsQueue.Enqueue(evt, { Clock = pe.Clock; Priority = 0 }) // Higher priority
+        | ElevatorEvent ee -> this.EventsQueue.Enqueue(evt, { Clock = ee.Clock; Priority = 1000000 }) // Processed after person events
+        | PersonEvent pe ->
+            let (PersonId iId) = pe.Person.Id
+            this.EventsQueue.Enqueue(evt, { Clock = pe.Clock; Priority = iId })
 
-    member this.AddJournalRecord record =
-        this.Journal.Add(record)
+    member this.AddJournalRecord record = this.Journal.Add(record)
 
 // ----------------------------------------
 // Actors
@@ -479,4 +495,3 @@ and
     { B: DataBag
       TransportedPersons: System.Collections.Generic.List<Person>
       Elevators: ElevatorsActor }
-

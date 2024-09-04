@@ -62,11 +62,11 @@ type ElevatorsActor with
         if cabin.PowerStatus = Idle then
             assert (cabin.DoorStatus = Closed)
             assert (cabin.MotorStatus = Off)
-            assert (cabin.Direction = NoDir)
+            assert (cabin.Direction = NoDirection)
 
             // If we call elevator from the floor the cabin is currently waiting, then we just have to open doors
             if cabin.Floor = entry then
-                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, PowerState = Busy))
+                this.B.AddJournalRecord(JournalCabinSetPower(Clock = clk, CabinIndex = 0, PowerState = Busy))
 
                 this.Cabins[0] <-
                     { cabin with
@@ -89,7 +89,7 @@ type ElevatorsActor with
                         MotorStatus = Accelerating
                         Direction = if (entry > cabin.Floor) then Up else Down }
 
-                this.B.AddJournalRecord(JournalCabinSetState(Clock = clk, CabinIndex = 0, PowerState = Busy))
+                this.B.AddJournalRecord(JournalCabinSetPower(Clock = clk, CabinIndex = 0, PowerState = Busy))
                 if this.Cabins[0].Direction<>oldDirection then
                     this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = this.Cabins[0].Direction))
                 this.B.AddJournalRecord(JournalMotorAccelerating(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor, Direction = this.Cabins[0].Direction))
@@ -100,39 +100,36 @@ type ElevatorsActor with
                       Event = EndAcceleration
                       CreatedOn = clk })
 
-        // Cabin is not idle, so we need to check two special cases
+        // Cabin is not Idle, and entry is on current cabin floor, and the door is closing:
+        // we stop the closing, and switch to opening mode
 
-        // Entry is on current cabin floor, and the door is closing: we stop the closing, and switch to opening mode
         elif cabin.Floor = entry then
 
             if cabin.DoorStatus = Closing then
-                // Cabin is closing doors, so we cancel current event, and register a doors opening event with correct amount of time
-                // Since it's complex to find next elevator event in the queue (there could be person events before), do it in a separate function
-                this.B.AddJournalRecord(JournalCabinDoorsCloseInterrupt(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
-                let remainigTime = this.getEndClosingDoorEventRemainingTime clk
+                // We consider reopening only if cabin is not full
+                if this.Cabins[0].Persons.Length < this.Cabins[0].Capacity then
+                
+                    // We reopen only if the person goes in the same direction as cabin
+                    if this.Cabins[0].Direction = NoDirection || (this.Cabins[0].Direction = Up && exit > this.Cabins[0].Floor) || (this.Cabins[0].Direction = Down && exit < this.Cabins[0].Floor) then
 
-                this.Cabins[0] <-
-                    { cabin with
-                        DoorStatus = Opening
-                        IgnoreNextEndClosingDoorsEvent = true } // Door is now opening, we'll ignore coming EndClosingDoorsEvent
+                        // Cabin is closing doors, so we cancel current event, and register a doors opening event with correct amount of time
+                        // Since it's complex to find next elevator event in the queue (there could be person events before), do it in a separate function
+                        this.B.AddJournalRecord(JournalCabinDoorsCloseInterrupt(Clock = clk, CabinIndex = 0, Floor = this.Cabins[0].Floor))
 
-                // And we register a new EndOpeningDoors event for the cabin
-                this.B.RegisterEvent (ElevatorEvent
-                    { ElevatorEvent.Clock = clk.addOffset (this.B.Durations.OpeningDoorsDuration - remainigTime)
-                      CabinIndex = 0
-                      Event = EndOpeningDoors
-                      CreatedOn = clk })
+                        let remainigTime = this.getEndClosingDoorEventRemainingTime clk
 
-        // Cabin is not idle, on a different floor, but with no direction. If door is closing, then update its direction
-        elif cabin.Floor <> entry && cabin.Direction = NoDir then
+                        this.Cabins[0] <-
+                            { cabin with
+                                DoorStatus = Opening
+                                IgnoreNextEndClosingDoorsEvent = true } // Door is now opening, we'll ignore coming EndClosingDoorsEvent
 
-            // Cabin must move up or down, so we set direction and wait for the doors to close,
-            // once the doors are closed, motor will turn on and start accelerating
-            this.Cabins[0] <-
-                { cabin with
-                    Direction = if (entry > cabin.Floor) then Up else Down }
-            this.B.AddJournalRecord(JournalCabinSetDirection(Clock = clk, CabinIndex = 0, Direction = this.Cabins[0].Direction))
+                        // And we register a new EndOpeningDoors event for the cabin
+                        this.B.RegisterEvent (ElevatorEvent
+                            { ElevatorEvent.Clock = clk.addOffset (this.B.Durations.OpeningDoorsDuration - remainigTime)
+                              CabinIndex = 0
+                              Event = EndOpeningDoors
+                              CreatedOn = clk })
 
 
         Logging.logCabinUpdate this.B clk originalCabin this.Cabins[0]
@@ -167,14 +164,10 @@ type ElevatorsActor with
                     let rec checkPersonGoingInCabinDirection lst =
                         match lst with
                         | [] -> false
-                        | p :: remainingPersons ->
-                            if
-                                (this.Cabins[0].Direction = Up && p.ExitFloor > this.Cabins[0].Floor)
-                                || (this.Cabins[0].Direction = Down && p.ExitFloor < this.Cabins[0].Floor)
-                            then
-                                true
-                            else
-                                checkPersonGoingInCabinDirection remainingPersons
+                        | (p:Person) :: remainingPersons ->
+                            if this.Cabins[0].Direction = p.goDirection this.Cabins[0].Floor
+                            then true
+                            else checkPersonGoingInCabinDirection remainingPersons
 
                     checkPersonGoingInCabinDirection ll
 

@@ -264,12 +264,12 @@ let testContinuousSimulation () =
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
-testSimple1 ()
-testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
-testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
-testDoorsClosingWhenAPersonArrives ()
-testPersonsGoingUpAndDownFromSameFloor ()
+//testSimple1 ()
+//testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
+//testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+//testDoorsClosingWhenAPersonArrives ()
+//testPersonsGoingUpAndDownFromSameFloor ()
 testARandomSimulation ()
-testContinuousSimulation ()
+//testContinuousSimulation ()
 
 printfn "\nDone."
