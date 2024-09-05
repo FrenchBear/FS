@@ -71,7 +71,7 @@ type Direction =
     | Up
     | Down
 
-    member this.AsString () =
+    member this.AsString() =
         match this with
         | NoDirection -> "NoDir"
         | Up -> "Up"
@@ -159,13 +159,13 @@ type MotorState =
     | Accelerating
     | Decelerating
 
-    member this.AsString () =
+    member this.AsString() =
         match this with
         | Off -> "Off"
         | Accelerating -> "Acc"
         | FullSpeed -> "FS"
         | Decelerating -> "Dec"
-        
+
 type DoorState =
     | Open
     | Closed
@@ -224,10 +224,7 @@ type Cabin =
 // ----------------------------------------
 // Simulation data
 
-type SimulationDescription =
-    { Title: string
-      Description: string
-    }
+type SimulationDescription = { Title: string; Description: string }
 
 type RandomPersonsAlgorithm =
     | Ground50Levels50
@@ -311,13 +308,6 @@ type SimulationStats =
       SimulationRealTimeDuration: float
       SimulationEventsCount: int }
 
-type SimulationResult =
-    { SimulationData: SimulationData
-      ElevatorsStats: ElevatorsStats
-      PersonsStats: PersonsStats
-      TransportedPersons: Person array
-      SimulationStats: SimulationStats }
-
 
 // ----------------------------------------
 // Journal
@@ -373,6 +363,18 @@ type RunningStatus =
       PersonsInCabin: int
       MaxPersonsInCabin: int
       LevelsCovered: int array }
+
+// ----------------------------------------
+// Final results of simulation
+
+type SimulationResults =
+    { SimulationDescription: SimulationDescription
+      SimulationData: SimulationData
+      ElevatorsStats: ElevatorsStats
+      PersonsStats: PersonsStats
+      TransportedPersons: Person array
+      SimulationStats: SimulationStats
+      Journal: System.Collections.Generic.List<JournalRecord> }
 
 // ----------------------------------------
 // Landings

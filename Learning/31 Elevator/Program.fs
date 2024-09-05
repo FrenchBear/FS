@@ -7,10 +7,7 @@
 // Various tests
 
 
-
-let testSimple1 () =
-    printfn "\n---------------------------------------\nTest Simple #1\n"
-
+let simulationSimple1 () =
     let persone = [|
         { Id = PersonId 1; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock 10; EntryClock = None; ExitClock = None }
     |]
@@ -33,7 +30,12 @@ let testSimple1 () =
           Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
-    let res = runSimulation b
+    runSimulation b
+
+let testSimple1 () =
+    printfn "\n---------------------------------------\nTest Simple #1\n"
+
+    let res = simulationSimple1 ()
 
     Simulation.PrintSimulationData(res.SimulationData);
     PersonsActor.PrintTransportedPersons(res.TransportedPersons);
@@ -41,10 +43,9 @@ let testSimple1 () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
+// ============================================================================================================
 
-let testSimple2 () =
-    printfn "\n---------------------------------------\nTest Simple #2\n"
-
+let simulationSimple2 () =
     let persone = [|
         { Id = PersonId 1; EntryFloor = Floor 1; ExitFloor = Floor 4; ArrivalClock = Clock 4; EntryClock = None; ExitClock = None }
         { Id = PersonId 2; EntryFloor = Floor 1; ExitFloor = Floor 0; ArrivalClock = Clock 42; EntryClock = None; ExitClock = None }
@@ -69,7 +70,12 @@ let testSimple2 () =
           Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
-    let res = runSimulation b
+    runSimulation b
+
+let testSimple2 () =
+    printfn "\n---------------------------------------\nTest Simple #2\n"
+
+    let res = simulationSimple2 ()
 
     Simulation.PrintSimulationData(res.SimulationData);
     PersonsActor.PrintTransportedPersons(res.TransportedPersons);
@@ -77,10 +83,9 @@ let testSimple2 () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
+// ============================================================================================================
 
-let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
-    printfn "\n---------------------------------------\nTest 10 persons arriving together with cabin capacity 6\n"
-
+let simulation10PersonsArrivingTogetherWithCabinCapacity6 () =
     let tenPersonsArrivingAtTimeZero = [|
         { Id = PersonId 1; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock.Zero; EntryClock = None; ExitClock = None }
         { Id = PersonId 2; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock.Zero; EntryClock = None; ExitClock = None }
@@ -106,7 +111,12 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
           Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
-    let res = runSimulation b
+    runSimulation b
+
+let test10PersonsArrivingTogetherWithCabinCapacity6 () =
+    printfn "\n---------------------------------------\nTest 10 persons arriving together with cabin capacity 6\n"
+
+    let res = simulation10PersonsArrivingTogetherWithCabinCapacity6 ()
 
     assert (res.ElevatorsStats.LevelsCovered[6] = 3) // First elevator move over 3 levels (Floor.Zero->3) with full capacity, 6 persons
     assert (res.ElevatorsStats.LevelsCovered[0] = 3) // Then three levels again with an empty cabin, to go back floor 3->0 to take remaining persons
@@ -118,11 +128,9 @@ let testSimulation10PersonsArrivingTogetherWithCabinCapacity6 () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
+// ============================================================================================================
 
-
-let testPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
-    printfn "\n---------------------------------------\nTest Person arriving just when cabin doors are about to close\n"
-
+let simulationPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     // Person 2 arrives just when the door is about to close
     // Check that person events are processed before elevator events, so both persons are transported together
     let personsData = [|
@@ -141,7 +149,12 @@ let testPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
           Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
-    let res = runSimulation b
+    runSimulation b
+
+let testPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
+    printfn "\n---------------------------------------\nTest Person arriving just when cabin doors are about to close\n"
+
+    let res = simulationPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
 
     assert (res.ElevatorsStats.LevelsCovered[2] = 3) // Make sure that the two persons traveled together on 3 levels
 
@@ -151,10 +164,9 @@ let testPersonArrivingJustWhenCabinDoorsAreAboutToClose () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
+// ============================================================================================================
 
-let TestPersonArrivingJustWhenCabinDoorsHaveFinishedClosing () =
-    printfn "\n---------------------------------------\nTest Person arriving just when cabin have finished closing\n"
-
+let simulationPersonArrivingJustWhenCabinDoorsHaveFinishedClosing () =
     // Person 2 arrives just when the door have closed, door should reopen and let the person move in
     let personsData = [|
         { Id = PersonId 1; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock.Zero; EntryClock = None; ExitClock = None }
@@ -172,7 +184,12 @@ let TestPersonArrivingJustWhenCabinDoorsHaveFinishedClosing () =
           Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
-    let res = runSimulation b
+    runSimulation b
+
+let testPersonArrivingJustWhenCabinDoorsHaveFinishedClosing () =
+    printfn "\n---------------------------------------\nTest Person arriving just when cabin have finished closing\n"
+
+    let res = simulationPersonArrivingJustWhenCabinDoorsHaveFinishedClosing ()
 
     assert (res.ElevatorsStats.LevelsCovered[2] = 3) // Make sure that the two persons traveled together on 3 levels
 
@@ -182,10 +199,9 @@ let TestPersonArrivingJustWhenCabinDoorsHaveFinishedClosing () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
+// ============================================================================================================
 
-let testDoorsClosingWhenAPersonArrives () =
-    printfn "\n---------------------------------------\nTest Doors closing when a person arrives\n"
-
+let simulationDoorsClosingWhenAPersonArrives () =
     // Person 2 arrives just when the door is closing, and person 3 1s later
     // Check that the closing door sequence is interrupted (ClosingDoors event is deleted) while both persons are maintained in the list
     let personsData = [|
@@ -211,7 +227,12 @@ let testDoorsClosingWhenAPersonArrives () =
           Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
-    let res = runSimulation b
+    runSimulation b
+
+let testDoorsClosingWhenAPersonArrives () =
+    printfn "\n---------------------------------------\nTest Doors closing when a person arrives\n"
+
+    let res = simulationDoorsClosingWhenAPersonArrives ()
 
     assert (res.SimulationStats.SimulationDuration = 60)
     let tp2 = res.TransportedPersons |> Array.find (fun p -> p.Id = PersonId 2)
@@ -225,10 +246,9 @@ let testDoorsClosingWhenAPersonArrives () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
+// ============================================================================================================
 
-let testPersonsGoingUpAndDownFromSameFloor () =
-    printfn "\n---------------------------------------\nTest Persons going up and down from same floor\n"
-
+let simulationPersonsGoingUpAndDownFromSameFloor () =
     // All persons arrive on 2nd floor, Persons 1 and 3 go to Floor.Zero, Persons 2 and 4 go to Floor 4
     let personsData = [|
         { Id = PersonId 1; EntryFloor = Floor 2; ExitFloor = Floor.Zero; ArrivalClock = Clock 10; EntryClock = None; ExitClock = None }
@@ -254,7 +274,12 @@ let testPersonsGoingUpAndDownFromSameFloor () =
           Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
-    let res = runSimulation b
+    runSimulation b
+
+let testPersonsGoingUpAndDownFromSameFloor () =
+    printfn "\n---------------------------------------\nTest Persons going up and down from same floor\n"
+
+    let res = simulationPersonsGoingUpAndDownFromSameFloor ()
 
     assert (res.SimulationStats.SimulationDuration = 81)
 
@@ -279,11 +304,10 @@ let testPersonsGoingUpAndDownFromSameFloor () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
+// ============================================================================================================
 
 // Just a random long simulation
-let testARandomSimulation () =
-    printfn "\n---------------------------------------\nTest a random simulation\n"
-
+let simulationRandom () =
     let b =
         { SimulationDescription = { Title = "Simulation aléatoire"; Description = "A random large simulation" }
           SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 6 }
@@ -301,7 +325,12 @@ let testARandomSimulation () =
           Journal = new System.Collections.Generic.List<JournalRecord>()
         }
 
-    let res = runSimulation b
+    runSimulation b
+
+let testRandom () =
+    printfn "\n---------------------------------------\nTest a random simulation\n"
+
+    let res = simulationRandom ()
     
     Simulation.PrintSimulationData(res.SimulationData);
     PersonsActor.PrintTransportedPersons(res.TransportedPersons);
@@ -309,6 +338,7 @@ let testARandomSimulation () =
     ElevatorsActor.printElevatorStats res.ElevatorsStats
     Simulation.printSimulationStats res.SimulationStats
 
+// ============================================================================================================
 
 let testContinuousSimulation () =
     printfn "\n---------------------------------------\nTest continuous simulation\n"
@@ -333,17 +363,20 @@ let testContinuousSimulation () =
         printfn "%*c" s '*'
 
 
+// ============================================================================================================
+// ============================================================================================================
+
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
-//testSimple1 ()
+testSimple1 ()
 testSimple2 ()
-//testSimulation10PersonsArrivingTogetherWithCabinCapacity6 ()
-//testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
-//TestPersonArrivingJustWhenCabinDoorsHaveFinishedClosing ()
-//testDoorsClosingWhenAPersonArrives ()
-//testPersonsGoingUpAndDownFromSameFloor ()
-//testARandomSimulation ()
-//testContinuousSimulation ()
+test10PersonsArrivingTogetherWithCabinCapacity6 ()
+testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+testPersonArrivingJustWhenCabinDoorsHaveFinishedClosing ()
+testDoorsClosingWhenAPersonArrives ()
+testPersonsGoingUpAndDownFromSameFloor ()
+testRandom ()
+testContinuousSimulation ()
 
 printfn "\nDone."

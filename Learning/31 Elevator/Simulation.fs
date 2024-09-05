@@ -79,11 +79,13 @@ let runSimulation (b: DataBag) =
             let (sd, ps, es, tp) = Journal.checkJournalAndComputeStatistics b.Journal b.LogDetails.ShowJournal
 
             {
-                SimulationResult.SimulationData = sd
+                SimulationDescription = b.SimulationDescription
+                SimulationResults.SimulationData = sd
                 SimulationStats = ss
                 ElevatorsStats = es
                 PersonsStats = ps
                 TransportedPersons = tp
+                Journal = b.Journal
             }
 
         else
