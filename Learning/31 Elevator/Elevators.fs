@@ -548,13 +548,13 @@ type ElevatorsActor with
 
         Logging.logCabinUpdate this.B clk originalCabin this.Cabins[0]
 
-        let (Floor iFloor) = this.Cabins[0].Floor
-        let updatedLanding = this.Landings[iFloor]
-        Logging.logLandingUpdate this.B clk this.Cabins[0].Floor originalLanding updatedLanding
-
         // Decision event is special, changes floor, and breaks originalLanging/updatedLanding comparison
-        // Anyway, Devision event doesn't update Landing
+        // Anyway, Decision event doesn't update Landing
         if evt.Event <> Decision then
+            let (Floor iFloor) = this.Cabins[0].Floor
+            let updatedLanding = this.Landings[iFloor]
+            Logging.logLandingUpdate this.B clk this.Cabins[0].Floor originalLanding updatedLanding
+
             if originalLanding.CallUp <> updatedLanding.CallUp then
                 if updatedLanding.CallUp then
                     this.B.AddJournalRecord(

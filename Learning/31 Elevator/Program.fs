@@ -306,6 +306,55 @@ let testPersonsGoingUpAndDownFromSameFloor () =
 
 // ============================================================================================================
 
+// Note that the result of this simulation is not satisfying
+// When empty cabin is moving down after three first persons moved out on floor 3, two persons remain waiting to go up,
+// one person on floor 0->3, and 1 person on floor 1->4
+// But with current business logic, empty cabin stops at floor 1 with direction=NoDirection, person on floor 1 enters,
+// cabin direction->up, and person on floor 0 will have to wait for the cabin going floor 1->4->0 before moving in
+// In this case, it could be better not to stop on floor 1 and continue down to 0, but more thinking is needed
+
+let simulationUselessStop () =
+    // With a cabin capacity of 3, at atime 10, 4 persons are going up Floor 0->3 and 1 from 1->4
+    let personsData = [|
+        { Id = PersonId 1; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock 10; EntryClock = None; ExitClock = None }
+        { Id = PersonId 2; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock 10; EntryClock = None; ExitClock = None }
+        { Id = PersonId 3; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock 10; EntryClock = None; ExitClock = None }
+        { Id = PersonId 4; EntryFloor = Floor.Zero; ExitFloor = Floor 3; ArrivalClock = Clock 10; EntryClock = None; ExitClock = None }
+        { Id = PersonId 5; EntryFloor = Floor 1; ExitFloor = Floor 4; ArrivalClock = Clock 10; EntryClock = None; ExitClock = None }
+    |]
+
+    let b =
+        { SimulationDescription = { Title = "Ascenseur s'arrête mais cabine pleine"; Description = "Capacity 3, but 4 persons go up, and 1 next stop" }
+          SimulationElevators = { Levels = 6; NumberOfCabins = 1; Capacity = 3 }
+          SimulationPersons = SimulationPersonsArray personsData 
+          LogDetails = { standardLogDetails with ShowLog = true; ShowEvents = true; ShowJournal = true }
+          //LogDetails = { 
+          //    ShowLog = true
+          //    ShowEvents = false
+          //    ShowInitialPersons = false
+          //    ShowDetailedPersonStats = true
+          //    ShowDetailedElevatorStatRecords = false }
+          Durations = standardDurations
+
+          EventsQueue = new System.Collections.Generic.PriorityQueue<CommonEvent, ClockPriority>()
+          Journal = new System.Collections.Generic.List<JournalRecord>()
+        }
+
+    runSimulation b
+
+let testUselessStop () =
+    printfn "\n---------------------------------------\nTest Useless stop\n"
+
+    let res = simulationUselessStop ()
+
+    Simulation.PrintSimulationData(res.SimulationData);
+    PersonsActor.PrintTransportedPersons(res.TransportedPersons);
+    PersonsActor.printPersonStats res.PersonsStats
+    ElevatorsActor.printElevatorStats res.ElevatorsStats
+    Simulation.printSimulationStats res.SimulationStats
+
+// ============================================================================================================
+
 // Just a random long simulation
 let simulationRandom () =
     let b =
@@ -369,14 +418,15 @@ let testContinuousSimulation () =
 System.Console.OutputEncoding <- System.Text.Encoding.UTF8
 printfn "Elevator simulation in F#\n"
 
-testSimple1 ()
-testSimple2 ()
-test10PersonsArrivingTogetherWithCabinCapacity6 ()
-testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
-testPersonArrivingJustWhenCabinDoorsHaveFinishedClosing ()
-testDoorsClosingWhenAPersonArrives ()
-testPersonsGoingUpAndDownFromSameFloor ()
-testRandom ()
-testContinuousSimulation ()
+//testSimple1 ()
+//testSimple2 ()
+//test10PersonsArrivingTogetherWithCabinCapacity6 ()
+//testPersonArrivingJustWhenCabinDoorsAreAboutToClose ()
+//testPersonArrivingJustWhenCabinDoorsHaveFinishedClosing ()
+//testDoorsClosingWhenAPersonArrives ()
+//testPersonsGoingUpAndDownFromSameFloor ()
+testUselessStop()
+//testRandom ()
+//testContinuousSimulation ()
 
 printfn "\nDone."
