@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net8.0-windows</TargetFramework>
+		<TargetFramework>net9.0-windows</TargetFramework>
 		<RootNamespace>FS16</RootNamespace>
 		<Description>Learning F#, Exercises based on "Why using F#?, Part 5, Anything C# can do"</Description>
 		<Authors>Pierre Violent</Authors>
