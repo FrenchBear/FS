@@ -2,11 +2,11 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net9.0-windows</TargetFramework>
+		<TargetFramework>net10.0-windows</TargetFramework>
 		<RootNamespace>FS16</RootNamespace>
 		<Description>Learning F#, Exercises based on "Why using F#?, Part 5, Anything C# can do"</Description>
 		<Authors>Pierre Violent</Authors>
-		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
+		<Copyright>Copyrignt ©2024-2026 Pierre Violent</Copyright>
 		<UseWindowsForms>true</UseWindowsForms>
 	</PropertyGroup>
 

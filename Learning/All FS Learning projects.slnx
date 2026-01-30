@@ -1,0 +1,37 @@
+<Solution>
+  <Project Path="28 Param deconstruction\28 Param deconstruction.fsproj" />
+  <Project Path="29 State machine\29 State machine.fsproj" />
+  <Project Path="30 Operators and units\30 Operators and units.fsproj" />
+  <Project Path="31 Elevator\31 Elevator.fsproj" />
+  <Project Path="32 WrappedString\32 WrappedString.fsproj" />
+  <Project Path="33 Map Apply Lift\33 Map Apply Lift.fsproj" />
+  <Project Path="34 CustomEquality CustomComparison\34 CustomEquality CustomComparison.fsproj" />
+  <Project Path="35 Class vs Record\35 Class vs Record.fsproj" />
+  <Project Path="01 SumTri\01 SumTri.fsproj" />
+  <Project Path="02 Modules\02 Modules.fsproj" />
+  <Project Path="03 Attaching members\03 Attaching members.fsproj" />
+  <Project Path="04 Calc\04 Calc.fsproj" />
+  <Project Path="05 Primes\05 Primes.fsproj" />
+  <Project Path="06 Matching\06 Matching.fsproj" />
+  <Project Path="07 Printf\07 Printf.fsproj" />
+  <Project Path="08 CLParser\08 CLParser.fsproj" />
+  <Project Path="09 Roman\09 Roman.fsproj" />
+  <Project Path="10 Types\10 Types.fsproj" />
+  <Project Path="11 Units of measure\11 Units of measure.fsproj" />
+  <Project Path="12 Why\12 Why.fsproj" />
+  <Project Path="13 Concurrency\13 Concurrency.fsproj" />
+  <Project Path="14 Messages\14 Messages.fsproj" />
+  <Project Path="15 Events\15 Events.fsproj" />
+  <Project Path="16 Object oriented\16 Object oriented.fsproj" />
+  <Project Path="17 Type extensions\17 Type extensions.fsproj" />
+  <Project Path="18 Cheatsheet\18 Cheatsheet.fsproj" />
+  <Project Path="19 Tree\19 Tree.fsproj" />
+  <Project Path="20 Active patterns\20 Active patterns.fsproj" />
+  <Project Path="21 Async\21 Async.fsproj" />
+  <Project Path="22 Code organization\22 Code organization.fsproj" />
+  <Project Path="23 Collections\23 Collections.fsproj" />
+  <Project Path="24 Functions\24 Functions.fsproj" />
+  <Project Path="25 StringReverse\25 StringReverse.fsproj" />
+  <Project Path="26 EmailAddress 1\26 EmailAddress 1.fsproj" />
+  <Project Path="27 EmailAddress 2\27 EmailAddress 2.fsproj"   />
+</Solution>

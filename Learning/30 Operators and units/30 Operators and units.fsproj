@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<OutputType>Exe</OutputType>
 		<RootNamespace>FS30</RootNamespace>
 		<description>Learning F#, Operators and units</description>
 		<Authors>Pierre Violent</Authors>
-		<Copyright>Copyrignt ©2024 Pierre Violent</Copyright>
+		<Copyright>Copyrignt ©2024-2026 Pierre Violent</Copyright>
 	</PropertyGroup>
 
 	<ItemGroup>

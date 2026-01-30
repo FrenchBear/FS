@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Cordic/Cordic.fsproj" />
+  <Project Path="DecimalToFraction/DecimalToFraction.fsproj" />
+  <Project Path="EgyptianFractions/EgyptianFractions.fsproj" />
+  <Project Path="FractionDevelopment/FractionDevelopment.fsproj" />
+  <Project Path="HammingDistance/HammingDistance.fsproj" />
+  <Project Path="RootsWithoutDivision/RootsWithoutDivision.fsproj" />
+</Solution>
